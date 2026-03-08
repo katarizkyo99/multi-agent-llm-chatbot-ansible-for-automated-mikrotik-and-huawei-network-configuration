@@ -1,0 +1,11 @@
+- name: Test ping target host
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Ping test
+      ansible.builtin.command: "ping -c 4 {{ ip }}"
+      register: ping_output
+
+    - name: Print results
+      debug:
+        msg: "{{ ping_output.stdout }}"

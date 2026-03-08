@@ -1,0 +1,7 @@
+Django
+djangorestframework
+requests
+python-dotenv
+django-cors-headers
+psycopg2-binary
+ansible-runner

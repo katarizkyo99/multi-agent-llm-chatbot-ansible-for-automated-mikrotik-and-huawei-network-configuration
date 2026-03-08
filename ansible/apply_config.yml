@@ -1,0 +1,25 @@
+- name: Apply config to network device
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    # MIKROTIK
+    - name: Apply config to Mikrotik RouterOs
+      community.routeros.command:
+        commands: "{{ config_cli }}"
+      when: ansible_network_os == "routeros"
+      register: mikrotik_result  
+      
+      failed_when: 
+        - mikrotik_result.failed == true or
+          "bad command" in mikrotik_result.stdout[0] | lower or
+          "syntax error" in mikrotik_result.stdout[0] | lower or
+          "expected end" in mikrotik_result.stdout[0] | lower or
+          "input does not match" in mikrotik_result.stdout[0] | lower or
+          "no such item" in mikrotik_result.stdout[0] | lower
+
+    # HUAWEI
+    - name: Apply config to Huawei
+      community.network.ce_config:
+        lines: "{{ config_cli }}"
+      when: ansible_network_os == 'ce'
