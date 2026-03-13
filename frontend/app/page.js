@@ -1,4 +1,3 @@
-// src/app/page.js
 "use client";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -8,7 +7,7 @@ import MessageInput from "@/components/MessageInput";
 import HistoryViewer from "@/components/HistoryViewer";
 
 export default function Home() {
-    const BASE_URL = "http://192.168.0.104:8000";
+    const BASE_URL = "http://192.168.0.104:8000"; // Sesuaikan IP Anda
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [search, setSearch] = useState("");
@@ -20,18 +19,15 @@ export default function Home() {
     const [isThinking, setIsThinking] = useState(false);
     
     const [isExecuting, setIsExecuting] = useState(false); 
-    
     const [pendingConfig, setPendingConfig] = useState(null);
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-    const [showGraph, setShowGraph] = useState(false);
+    
     const [configHistory, setConfigHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
-    const [currentTopology, setCurrentTopology] = useState(null);
     const [networkUsers, setNetworkUsers] = useState([]);
-
 
     const activeChat = chats.find((c) => c.id === activeChatId);
 
@@ -44,48 +40,29 @@ export default function Home() {
             }
             const text = await res.text();
             if (!text) return null;
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error("Gagal parse JSON:", text);
-                throw new Error("Respon server bukan JSON valid");
-            }
+            return JSON.parse(text);
         } catch (err) {
             console.error("Fetch Error:", err);
             throw err;
         }
     };
 
-    // Mengambil Data Chat & History
     useEffect(() => {
         const fetchChats = async () => {
             try {
                 const data = await safeFetchJson(`${BASE_URL}/api/chats/`);
                 if (Array.isArray(data)) {
-                    const formatted = data.map((c) => ({
-                        id: String(c.id),
-                        title: c.title,
-                        messages: [],
-                    }));
+                    const formatted = data.map((c) => ({ id: String(c.id), title: c.title, messages: [] }));
                     setChats(formatted);
-                    if (formatted.length > 0 && !activeChatId) {
-                        setActiveChatId(formatted[0].id);
-                    }
+                    if (formatted.length > 0 && !activeChatId) setActiveChatId(formatted[0].id);
                 }
-            } catch (e) {
-                console.error("Gagal load chat list:", e);
-            }
+            } catch (e) { console.error("Gagal load chat list:", e); }
         };
         const fetchNetworkUsers = async () => {
             try {
-                // Pastikan endpoint ini sesuai dengan URL backend-mu
                 const data = await safeFetchJson(`${BASE_URL}/api/network-devices/`); 
-                if (Array.isArray(data)) {
-                    setNetworkUsers(data);
-                }
-            } catch (e) {
-                console.error("Gagal load daftar user network:", e);
-            }
+                if (Array.isArray(data)) setNetworkUsers(data);
+            } catch (e) { console.error("Gagal load daftar user:", e); }
         };
         fetchChats();
         fetchNetworkUsers();
@@ -97,19 +74,10 @@ export default function Home() {
         const loadMessages = async () => {
             try {
                 const data = await safeFetchJson(`${BASE_URL}/api/chats/${activeChatId}/messages/`);
-                if (!data) return;
-                if (data.messages) {
-                    setChats((prev) =>
-                        prev.map((c) =>
-                            c.id === activeChatId ? { ...c, messages: data.messages } : c
-                        )
-                    );
+                if (data && data.messages) {
+                    setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: data.messages } : c));
                 }
-                if (data.topology) setCurrentTopology(data.topology);
-                else setCurrentTopology(null);
-            } catch (err) {
-                console.error("Gagal load pesan:", err);
-            }
+            } catch (err) { console.error("Gagal load pesan:", err); }
         };
         loadMessages();
     }, [activeChatId]);
@@ -118,9 +86,7 @@ export default function Home() {
         try {
             const data = await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/`);
             if (Array.isArray(data)) setConfigHistory(data);
-        } catch (error) {
-            console.error("Error fetching history:", error);
-        }
+        } catch (error) { console.error("Error fetching history:", error); }
     };
 
     const handleOpenHistory = () => {
@@ -128,21 +94,15 @@ export default function Home() {
         setShowHistory(true);
     };
 
-    // Chat Management 
     const handleNewChat = useCallback(async () => {
         try {
-            const data = await safeFetchJson(`${BASE_URL}/api/chats/create/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-            });
+            const data = await safeFetchJson(`${BASE_URL}/api/chats/create/`, { method: "POST" });
             if (data) {
                 const newChat = { id: String(data.id), title: data.title, messages: [] };
                 setChats((prev) => [...prev, newChat]);
                 setActiveChatId(String(data.id));
             }
-        } catch (err) {
-            console.error("Gagal membuat chat:", err);
-        }
+        } catch (err) { console.error("Gagal membuat chat:", err); }
     }, [setChats, setActiveChatId, BASE_URL]);
 
     const handleRename = (index) => {
@@ -161,100 +121,59 @@ export default function Home() {
             setChats(updated);
             if (updated.length > 0) setActiveChatId(updated[0].id);
             else setActiveChatId(null);
-        } catch (err) {
-            console.error("Gagal hapus chat:", err);
-        }
+        } catch (err) { console.error("Gagal hapus chat:", err); }
     };
-
 
     const executeConfig = async (finalConfig) => {
         try {
-            const result = await safeFetchJson(`${BASE_URL}/api/execute_config/`, {
+            return await safeFetchJson(`${BASE_URL}/api/execute_config/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: activeChatId,
-                    config_cli: finalConfig,
-                }),
+                body: JSON.stringify({ chat_id: activeChatId, config_cli: finalConfig }),
             });
-            return result;
-        } catch (e) {
-            console.error("EXEC ERROR:", e);
-            throw e;
-        }
+        } catch (e) { throw e; }
     };
 
     const handleApproveConfig = async (editedConfig) => {
         if (!editedConfig) return;
-        
         setIsExecuting(true);
-        
         let executionSuccess = false;
         let outputMessage = "";
-        let errorDetail = "";
 
         try {
             const execResult = await executeConfig(editedConfig);
             const isConfigChanged = pendingConfig && (pendingConfig.trim() !== editedConfig.trim());
-            const editNotice = isConfigChanged 
-                ? `\n\nKonfigurasi diedit oleh pengguna:\n\n${editedConfig}\n` 
-                : "";
+            const editNotice = isConfigChanged ? `\n\nKonfigurasi diedit oleh pengguna:\n\n${editedConfig}\n` : "";
+            
             if (execResult && execResult.results && execResult.results.length > 0) {
                 const firstResult = execResult.results[0];
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
                     outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}${editNotice}`;
                 } else {
-                    executionSuccess = false;
-                    errorDetail = firstResult.stderr || firstResult.error || "Unknown Error";
-                    outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\nError: ${editNotice}`;
+                    outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\nError: ${firstResult.stderr || firstResult.error}${editNotice}`;
                 }
-                
             } else {
-                executionSuccess = false;
                 outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail.";
             }
 
             await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/add/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    config: editedConfig,
-                    status: executionSuccess ? "Berhasil" : "Gagal",
-                }),
+                body: JSON.stringify({ config: editedConfig, status: executionSuccess ? "Berhasil" : "Gagal" }),
             });
 
             await safeFetchJson(`${BASE_URL}/api/chats/messages/save/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: activeChatId,
-                    role: "assistant",
-                    content: outputMessage,
-                }),
+                body: JSON.stringify({ chat_id: activeChatId, role: "assistant", content: outputMessage }),
             });
 
-            const newMessage = { role: "bot", text: outputMessage };
-            setChats((prev) =>
-                prev.map((c) =>
-                    c.id === activeChatId
-                        ? { ...c, messages: [...(c.messages || []), newMessage] }
-                        : c
-                )
-            );
-
+            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: outputMessage }] } : c));
         } catch (error) {
-            console.error("Error approve:", error);
             const errorMsg = `❌ Terjadi kesalahan sistem saat memproses: ${error.message}`;
-            setChats((prev) =>
-                prev.map((c) =>
-                    c.id === activeChatId
-                        ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] }
-                        : c
-                )
-            );
+            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] } : c));
         } finally {
-            // 6. Cleanup
             setPendingConfig(null);
             fetchConfigHistory();
             setIsExecuting(false);
@@ -265,39 +184,21 @@ export default function Home() {
     const handleRejectConfig = async () => {
         setShowConfirmPopup(false);
         if (!pendingConfig) return;
-        
         const rejectMsg = "❌ Konfigurasi dibatalkan oleh pengguna.";
-
         try {
             await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/add/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    config: pendingConfig,
-                    status: "Ditolak",
-                }),
+                body: JSON.stringify({ config: pendingConfig, status: "Ditolak" }),
             });
             await safeFetchJson(`${BASE_URL}/api/chats/messages/save/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: activeChatId,
-                    role: "assistant",
-                    content: rejectMsg,
-                }),
+                body: JSON.stringify({ chat_id: activeChatId, role: "assistant", content: rejectMsg }),
             });
-            
-             setChats((prev) =>
-                prev.map((c) =>
-                    c.id === activeChatId
-                        ? { ...c, title: data.title ? data.title : c.title, messages: [...(c.messages || []), { role: "bot", text: rejectMsg }] }
-                        : c
-                )
-            );
-
-        } catch (error) {
-            console.error("Error reject:", error);
-        } finally {
+            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: rejectMsg }] } : c));
+        } catch (error) { console.error("Error reject:", error); } 
+        finally {
             setPendingConfig(null);
             fetchConfigHistory();
         }
@@ -311,20 +212,12 @@ export default function Home() {
         const currentPreviewUrl = previewUrl;
 
         let userMessage;
-        if (currentInput.trim() && currentSelectedImage) {
-            userMessage = { role: "user", text: currentInput.trim(), image: currentPreviewUrl };
-        } else if (currentInput.trim()) {
-            userMessage = { role: "user", text: currentInput.trim() };
-        } else if (currentSelectedImage) {
-            userMessage = { role: "user", image: currentPreviewUrl };
-        }
+        if (currentInput.trim() && currentSelectedImage) userMessage = { role: "user", text: currentInput.trim(), image: currentPreviewUrl };
+        else if (currentInput.trim()) userMessage = { role: "user", text: currentInput.trim() };
+        else if (currentSelectedImage) userMessage = { role: "user", image: currentPreviewUrl };
 
         if (userMessage) {
-            setChats((prev) =>
-                prev.map((c) =>
-                    c.id === activeChatId ? { ...c, messages: [...(c.messages || []), userMessage] } : c
-                )
-            );
+            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), userMessage] } : c));
         }
 
         setInput("");
@@ -350,42 +243,26 @@ export default function Home() {
 
             if (!res.ok) throw new Error(`Server Error ${res.status}`);
             const data = await res.json();
-
             if (data.error) throw new Error(data.error);
-            if (data.topology) setCurrentTopology(data.topology);
 
             const botReply = data.cli || data.reply || "⚠️ Tidak ada balasan.";
 
-            setChats((prev) =>
-                prev.map((c) =>
-                    c.id === String(data.chat_id || activeChatId)
-                        ? { ...c, messages: [...(c.messages || []), { role: "bot", text: botReply }] }
-                        : c
-                )
-            );
+            setChats((prev) => prev.map((c) => c.id === String(data.chat_id || activeChatId) ? { ...c, messages: [...(c.messages || []), { role: "bot", text: botReply }] } : c));
 
-            if (/ip address|interface|system-view|vlan|set|add|undo|enable|cli/i.test(botReply)) {
+            // TRIGGER POPUP KONFIRMASI BERDASARKAN FORMAT OUTPUT PROSES 2 LLM
+            if (botReply.includes("Target:") && botReply.includes("Konfigurasi:")) {
                 setPendingConfig(botReply);
                 setShowConfirmPopup(true);
             }
 
         } catch (error) {
-            console.error("Error handleSend:", error);
-            setChats((prev) =>
-                prev.map((c) =>
-                    c.id === activeChatId
-                        ? { ...c, messages: [...(c.messages || []), { role: "bot", text: `❌ Error: ${error.message}` }] }
-                        : c
-                )
-            );
+            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: `❌ Error: ${error.message}` }] } : c));
         } finally {
             setIsThinking(false);
         }
     };
 
-    const filteredChats = chats.filter((chat) =>
-        chat.title.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredChats = chats.filter((chat) => chat.title.toLowerCase().includes(search.toLowerCase()));
 
     return (
         <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden relative">
@@ -404,7 +281,6 @@ export default function Home() {
                 setNewName={setNewName}
                 handleRename={handleRename}
                 handleDelete={handleDelete}
-                setShowGraph={setShowGraph}
                 onOpenHistory={handleOpenHistory}
                 networkUsers={networkUsers}
             />
@@ -419,12 +295,6 @@ export default function Home() {
                     pendingConfig={pendingConfig}
                     handleApproveConfig={handleApproveConfig} 
                     handleRejectConfig={handleRejectConfig}
-                    showGraph={showGraph}
-                    setShowGraph={setShowGraph}
-                    showHistory={showHistory}
-                    setShowHistory={setShowHistory}
-                    configHistory={configHistory}
-                    currentTopology={currentTopology}
                     isExecuting={isExecuting} 
                 >
                     <MessageInput
