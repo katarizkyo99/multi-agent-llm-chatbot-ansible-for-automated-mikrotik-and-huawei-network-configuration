@@ -13,7 +13,6 @@ import subprocess
 import json
 
 SYSTEM_PROMPT = '''
-
 You are a friendly and professional multi-vendor network configuration assistant.
 
 Answer in Indonesian.
