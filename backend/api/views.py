@@ -132,16 +132,13 @@ Your task is ONLY to generate raw CLI scripts that are ready to be executed base
 VENDOR RULES:
 
 HUAWEI: DO NOT use system-view, quit, or return. Use undo shutdown. IF Layer 2 on the router, write portswitch.
-
-CISCO: DO NOT use configure terminal or exit. Use no shutdown.
-
 MIKROTIK: Use absolute paths (example: /ip address add...).
 
 You must not greet or provide markdown explanations.
 You MUST output in the following exact format:
 Target: [Device Name from database]
-IP: [Device IP Address from database]
-Configuration:
+IP Address: [Device IP Address from database]
+Konfigurasi:
 [CLI command line]
 [CLI command line]
 """
