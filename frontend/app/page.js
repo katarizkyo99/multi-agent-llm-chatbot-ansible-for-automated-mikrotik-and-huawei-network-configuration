@@ -46,7 +46,12 @@ export default function Home() {
             throw err;
         }
     };
-
+    const fetchNetworkUsers = async () => {
+        try {
+            const data = await safeFetchJson(`${BASE_URL}/api/network-devices/`); 
+            if (Array.isArray(data)) setNetworkUsers(data);
+        } catch (e) { console.error("Gagal load daftar user:", e); }
+    };
     useEffect(() => {
         const fetchChats = async () => {
             try {
@@ -54,15 +59,14 @@ export default function Home() {
                 if (Array.isArray(data)) {
                     const formatted = data.map((c) => ({ id: String(c.id), title: c.title, messages: [] }));
                     setChats(formatted);
-                    if (formatted.length > 0 && !activeChatId) setActiveChatId(formatted[0].id);
+                    const savedChatId = localStorage.getItem("activeChatId");
+                    if (savedChatId && formatted.some(c => c.id === savedChatId)) {
+                        setActiveChatId(savedChatId);
+                    } else if (formatted.length > 0 && !activeChatId) {
+                        setActiveChatId(formatted[0].id);
+                    }                
                 }
             } catch (e) { console.error("Gagal load chat list:", e); }
-        };
-        const fetchNetworkUsers = async () => {
-            try {
-                const data = await safeFetchJson(`${BASE_URL}/api/network-devices/`); 
-                if (Array.isArray(data)) setNetworkUsers(data);
-            } catch (e) { console.error("Gagal load daftar user:", e); }
         };
         fetchChats();
         fetchNetworkUsers();
@@ -71,6 +75,7 @@ export default function Home() {
 
     useEffect(() => {
         if (!activeChatId) return;
+        localStorage.setItem("activeChatId", activeChatId);
         const loadMessages = async () => {
             try {
                 const data = await safeFetchJson(`${BASE_URL}/api/chats/${activeChatId}/messages/`);
@@ -151,7 +156,7 @@ export default function Home() {
                     executionSuccess = true;
                     outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}${editNotice}`;
                 } else {
-                    outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\nError: ${firstResult.stderr || firstResult.error}${editNotice}`;
+                    outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\n\n`;
                 }
             } else {
                 outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail.";
@@ -247,9 +252,19 @@ export default function Home() {
 
             const botReply = data.cli || data.reply || "⚠️ Tidak ada balasan.";
 
-            setChats((prev) => prev.map((c) => c.id === String(data.chat_id || activeChatId) ? { ...c, messages: [...(c.messages || []), { role: "bot", text: botReply }] } : c));
-
+            setChats((prev) => prev.map((c) => 
+                c.id === String(data.chat_id || activeChatId) 
+                    ? { 
+                        ...c, 
+                        title: data.title || c.title, 
+                        messages: [...(c.messages || []), { role: "bot", text: botReply }] 
+                      } 
+                    : c
+            ));
             // TRIGGER POPUP KONFIRMASI BERDASARKAN FORMAT OUTPUT PROSES 2 LLM
+            if (botReply.includes("database") || botReply.includes("Berhasil") || botReply.includes("dihapus")) {
+                fetchNetworkUsers(); 
+            }
             if (botReply.includes("Target:") && botReply.includes("Konfigurasi:")) {
                 setPendingConfig(botReply);
                 setShowConfirmPopup(true);
