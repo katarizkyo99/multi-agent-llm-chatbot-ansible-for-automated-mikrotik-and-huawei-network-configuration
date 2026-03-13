@@ -1,5 +1,5 @@
-import React from "react";
-import { FiPlus, FiEdit2, FiTrash2, FiMenu, FiUser } from "react-icons/fi";
+import React, { useState } from "react";
+import { FiPlus, FiEdit2, FiTrash2, FiMenu, FiUser, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 export default function Sidebar({
     isSidebarOpen,
@@ -19,6 +19,9 @@ export default function Sidebar({
     onOpenHistory,
     networkUsers
 }) {
+    // State untuk mengontrol buka-tutup dropdown Perangkat Terdaftar
+    const [isDeviceListOpen, setIsDeviceListOpen] = useState(false);
+
     if (!isSidebarOpen) {
         return (
             <div className="fixed top-4 left-4 flex flex-col items-center gap-3 z-30">
@@ -127,22 +130,35 @@ export default function Sidebar({
                         Riwayat Konfigurasi
                     </button>
                     
-                    <div className="mb-2 flex items-center gap-2 text-gray-600 text-sm font-semibold">
-                        <FiUser /> Perangkat Terdaftar
+                    {/* Header Dropdown Interaktif */}
+                    <div 
+                        onClick={() => setIsDeviceListOpen(!isDeviceListOpen)}
+                        className="mb-2 flex items-center justify-between text-gray-600 text-sm font-semibold cursor-pointer hover:text-blue-600 transition-colors p-1 rounded"
+                    >
+                        <div className="flex items-center gap-2">
+                            <FiUser /> Perangkat Terdaftar
+                        </div>
+                        {isDeviceListOpen ? <FiChevronUp /> : <FiChevronDown />}
                     </div>
-                    <div className="overflow-y-auto max-h-40 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        {networkUsers && networkUsers.length > 0 ? (
-                            networkUsers.map((user, index) => (
-                                <div key={index} className="flex flex-col p-2 mb-2 bg-gray-50 border border-gray-200 rounded text-xs">
-                                    <span className="font-bold text-gray-700">{user.name}</span>
-                                    <span className="text-gray-500">{user.device_category}</span>
-                                    <span className="text-blue-600 font-mono mt-1">{user.ip_address}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-xs text-gray-400 px-2">Memuat / Tidak ada user...</p>
-                        )}
-                    </div>
+
+                    {/* Daftar Perangkat (Hanya Tampil Jika isDeviceListOpen === true) */}
+                    {isDeviceListOpen && (
+                        <div className="overflow-y-auto max-h-40 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 transition-all duration-300">
+                            {networkUsers && networkUsers.length > 0 ? (
+                                networkUsers.map((user, index) => (
+                                    <div key={index} className="flex flex-col p-2 mb-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-xs transition-colors">
+                                        <span className="font-bold text-gray-700">{user.name}</span>
+                                        <div className="flex justify-between items-center mt-1">
+                                            <span className="text-gray-500 uppercase text-[10px] font-bold tracking-wider">{user.device_category}</span>
+                                            <span className="text-blue-600 font-mono">{user.ip_address}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-gray-400 px-2 pb-2">Memuat / Tidak ada perangkat...</p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </aside>
         </>
