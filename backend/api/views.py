@@ -3,423 +3,194 @@ from rest_framework.response import Response
 from rest_framework import status
 import requests
 import os
-from .models import Chat, Message, RiwayatKonfigurasi, NetworkDevice, DeviceAlias
+import json
+import base64
+import subprocess
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
-from django.core.serializers import serialize
-import base64
-import ansible_runner
-import subprocess
-import json
+from .models import Chat, Message, RiwayatKonfigurasi, NetworkDevice, DeviceAlias
+
+# ==============================================================================
+# FUNGSI PEMBANTU UNTUK CALL API GROQ
+# ==============================================================================
+def call_groq_llm(api_key, model, messages, temperature=0.3):
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": 2048
+    }
+    resp = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=payload
+    )
+    if resp.status_code == 200:
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    else:
+        raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
+
+# ==============================================================================
+# SYSTEM PROMPTS 
+# ==============================================================================
+
+PROSES_1_PROMPT = """
+You are a Network Architect & Assistant. Respond in friendly Indonesian.
+Your job is to analyze user requests, create topologies, and offer execution.
+
+LIST OF DEVICES AVAILABLE IN THE DATABASE AT THIS TIME:
+{device_context}
+
+WORKING RULES FOR PROCESS 1:
+1. If the user describes >1 device or requests a topology, CREATE A TOPOLOGY using the Markdown ‘mermaid’ code block format with the ‘graph TD’ type.
+   Example format that you MUST follow:
+```mermaid
+   graph TD
+       Router0[“Router0\\n(11.11.11.11)”] --> Switch0[“Switch0\\n(192.168.10.1)”]
+       Switch0 --> PC0[“PC0\\n(.10.2)”]
+Always offer the user: “Would you like me to create the configuration now?”.
+
+If the user requests to create a new device that is not yet in the database, tell them that you will add it, then add the tag [ADD_DEVICE_TO_DB] {“name”: “...”, “ip”: “...”, ‘vendor’: “...”} at the end of your message.
+
+If the user AGREES to the configuration, YOU MUST STOP THE CONVERSATION and ONLY ISSUE THE TAG: [GENERATE_CONFIG] so that Process 2 takes over.
+
+If the user requests to see the results on the device (e.g., “display the list of IPs on device A”), ISSUE THE TAG: [READ_DEVICE] device_name, command.
+"""
+
+PROSES_2_PROMPT = """
+You are a Multi-Vendor Network Engineer.
+Your task is ONLY to generate raw CLI scripts that are ready to be executed based on chat history.
+
+VENDOR RULES:
+
+HUAWEI: DO NOT use system-view, quit, or return. Use undo shutdown. IF Layer 2 on the router, write portswitch.
+
+CISCO: DO NOT use configure terminal or exit. Use no shutdown.
+
+MIKROTIK: Use absolute paths (example: /ip address add...).
+
+You must not greet or provide markdown explanations.
+You MUST output in the following exact format:
+Target: [Device Name from database]
+IP: [Device IP Address from database]
+Configuration:
+[CLI command line]
+[CLI command line]
+"""
 
-SYSTEM_PROMPT = '''
-You are a friendly and professional multi-vendor network configuration assistant.
-
-Answer in Indonesian.
-
-Your task is to generate ready-to-run CLI configurations for network devices such as MikroTik, Cisco, Huawei, Juniper, or Linux.
-
-
-
-### STRICT SYNTAX RULES (CRITICAL):
-
-You MUST check the target device vendor: {{ device_vendor }}.
-
-1. **IF VENDOR IS HUAWEI (VRP/ATN):**
-   - **DO NOT** use `system-view`, `quit`, or `return`. (Automation handles this).
-   - Start directly with the configuration command (e.g., `interface ...`).
-   - Enable interface: `undo shutdown` (NEVER use `no shutdown`).
-   - Interface naming: Gunakan nama lengkap atau singkatan standar (e.g., `GigabitEthernet0/2/3`).
-   - - [ATURAN PENTING KHUSUS ROUTER]: 
-     Jika perangkat adalah ROUTER (bukan Switch) dan user meminta konfigurasi Layer 2 (Trunk/Access/Hybrid), 
-     KAMU WAJIB MENULIS `portswitch` SEBELUM perintah `port link-type`.
-
-2. **IF VENDOR IS CISCO (IOS):**
-   - **DO NOT** use `configure terminal` or `exit`. (Automation handles this).
-   - Start directly with the configuration command.
-   - Enable interface: `no shutdown`.
-   - Save config: `write memory`.
-
-3. **IF VENDOR IS MIKROTIK:**
-   - Use path-based commands (e.g., `/ip address add...`).
-   - Do NOT use `system-view` or `conf t`.
-
-
-
-⚙️ IMPORTANT RULE:
-
-
-
-Use proper indentation to reflect the command hierarchy.
-
-
-
-Example format (must be followed):
-
-system-view
-
-interface int g0/2/16
-
-ip address 10.10.10.1 255.255.255.0
-
-undo shutdown
-
-quit
-
-
-
-Do not include comments, descriptions, or contextual explanations.
-
-
-
-Make sure the syntax matches the requested vendor (or automatically detect the vendor if not specified).
-
-
-
-The output should be clean and executable directly on the target device.
-
-
-
-Respond based on input context:
-
-
-
-If the user greets you, respond with a short greeting in Indonesian.
-
-
-
-If a configuration request is made, return only the appropriate configuration command.
-
-
-
-If the user provides an interface or format example (e.g., "int g0/2/16"), use a similar pattern in the output.
-
-
-
-You must always produce JSON in the following format:
-
-
-
-You must always show on chatbot display in the following format:
-
-Target: target_name,
-
-Konfigurasi: config_cli
-
-
-
-target_name must be taken from the device name mentioned in the user's input.
-
-
-
-If the input does not contain a target name, you must ask the user to specify the device name.
-
-
-
-config_cli must contain only the raw CLI commands, with no addi tional comments, explanations, or markdown formatting.
-
-
-
-JIKA user mendeskripsikan topologi jaringan seperti koneksi antar perangkat (lewat teks atau gambar), KAMU WAJIB MENYERTAKAN blok JSON khusus untuk visualisasi graph.
-
-
-
-FORMAT VISUALISASI GRAPH (Wajib gunakan blok code ```json_graph ... ```):
-
-```json_graph
-
-{
-
-  "devices": [
-
-    {"id": "Router1", "type": "router", "label": "Router Utama"},
-
-    {"id": "Switch1", "type": "switch", "label": "Switch Lantai 1"}
-
-  ],
-
-  "connections": [
-
-    {"source": "Router1", "target": "Switch1"}
-
-  ]
-
-}
-
-
-
-
-
-
-
-'''
 
 class ChatView(APIView):
-    def post(self, request):
-        print("Request Data:", request.data)
-        
-        # SETUP API KEY
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            print("CRITICAL: GROQ_API_KEY tidak ditemukan di .env")
-            return Response({"error": "Server Config Error: API Key missing."}, status=500)
-
-        user_message = request.data.get("prompt", "")
-        uploaded_image = request.FILES.get("image")
-        chat_id = request.data.get("chat_id")
-
-        # Setup Chat Object
-        if chat_id:
-            chat = Chat.objects.filter(id=chat_id).first()
-            if not chat:
-                chat = Chat.objects.create(title="Percakapan Baru")
-        else:
-            chat = Chat.objects.create(title="Percakapan Baru")
-
-        # =================================================================
-        # ANALISIS GAMBAR (VISION) MENGGUNAKAN GROQ
-        # =================================================================
-        topology_json = None
-        final_image_data = None
-
-        if uploaded_image:
-            print("Vision Mode Aktif (Groq Llama Vision)")
-            try:
-                uploaded_image.seek(0)
-                image_bytes = uploaded_image.read()
-                uploaded_image.seek(0) 
-
-                base64_str = base64.b64encode(image_bytes).decode('utf-8')
-                mime_type = uploaded_image.content_type or "image/jpeg"
-                final_image_data = f"data:{mime_type};base64,{base64_str}"
-
-
-                model_vision = os.getenv("GROQ_MODEL_VISION", "meta-llama/llama-4-maverick-17b-128e-instruct")
-
-                vision_payload = {
-                    "model": model_vision,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text", 
-                                    "text": "Analisa topologi jaringan ini. Identifikasi perangkat (Router, Switch, PC) dan koneksinya secara detail. Output HANYA JSON raw tanpa markdown."
-                                },
-                                {
-                                    "type": "image_url", 
-                                    "image_url": {
-                                        "url": final_image_data
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    "temperature": 0.1, 
-                    "max_tokens": 1024
-                }
-
-                vision_resp = requests.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json=vision_payload
-                )
-
-                vision_data = vision_resp.json()
-
-                if vision_resp.status_code != 200:
-                    print(f"Groq Vision Error ({vision_resp.status_code}):", vision_data)
-                    error_msg = vision_data.get('error', {}).get('message', 'Unknown Error')
-                    return Response({"error": f"Vision AI Error: {error_msg}"}, status=500)
-
-                if "choices" in vision_data:
-                    vision_output = vision_data["choices"][0]["message"]["content"]
-                    
-                    clean_json = vision_output.replace("```json", "").replace("```", "").strip()
-                    try:
-                        topology_json = json.loads(clean_json)
-                        chat.topology_data = topology_json
-                        chat.save()
-                        print("✅ Topology Data (Llama) saved to DB!")
-                    except json.JSONDecodeError:
-                        print("⚠️ Gagal parse JSON dari Llama Vision, menyimpan raw text.")
-                        topology_json = {"raw": clean_json, "description": "Raw vision analysis"}
-                else:
-                    print("⚠️ Invalid Vision Response:", vision_data)
-
-            except Exception as e:
-                print(f"Exception Vision Block: {str(e)}")
-                return Response({"error": f"Vision Process Failed: {str(e)}"}, status=500)
-
-        # Menyimpan Pesan User ke DB
-        if uploaded_image:
-            Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
-        elif user_message:
-            Message.objects.create(chat=chat, role="user", content=user_message)
-
-
-
-
-        if chat.title == "Percakapan Baru":
-            if user_message:
-                try:
-                    title_payload = {
-                        "model": "llama3-8b-8192", 
-                        "messages": [
-                            {"role": "system", "content": "Buat 3 hingga 5 kata singkat dalam bahasa indonesia yang merangkum perintah user. HANYA OUTPUTKAN JUDUL SAJA tanpa tanda kutip dan tanpa penjelasan."},
-                            {"role": "user", "content": user_message}
-                        ],
-                        "temperature": 0.3,
-                        "max_tokens": 15
-                    }
-                    title_resp = requests.post(
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        headers={"Authorization": f"Bearer {api_key}"},
-                        json=title_payload
-                    ).json()
-                    
-                    new_title = title_resp["choices"][0]["message"]["content"].strip().replace('"', '')
-                    chat.title = new_title
-                except Exception as e:
-                    print(f"Gagal generate title: {e}")
-                    kata_user = user_message.split()
-                    chat.title = " ".join(kata_user[:4]) + ("..." if len(kata_user) > 4 else "")
-            
-            elif uploaded_image:
-                 chat.title = "Analisis Topologi Gambar"
-            
-            chat.save()
-
-
-
-
-
-
-        # =====================================================================================
-        # GENERATE PROMPT UNTUK TEXT LLM
-        # =====================================================================================
-        if topology_json:
-            groq_prompt = f"""
-            User baru saja mengunggah gambar topologi jaringan.
-            Berikut adalah hasil analisis Llama Vision terhadap gambar tersebut dalam format JSON:
-            {json.dumps(topology_json, indent=2)}
-
-            Instruksi User: "{user_message}"
-            
-            Tugasmu:
-            1. Pahami topologi berdasarkan JSON di atas.
-            2. Jawab instruksi user atau buatkan konfigurasi CLI jika diminta.
-            3. Patuhi SYSTEM_PROMPT.
-            """
-        else:
-            groq_prompt = user_message
-
-        if not groq_prompt.strip():
-             return Response({"reply": "Saya tidak dapat memproses permintaan kosong."}, status=200)
-
-        # =====================================================================================
-        # KIRIM KE GROQ (TEXT GENERATION)
-        # =====================================================================================
-        try:
-            devices = NetworkDevice.objects.all()
-            device_context_list = []
-            for d in devices:
-                device_context_list.append(f"- {d.name} : {d.vendor}")
-            device_context_str = "\n".join(device_context_list)
-            formatted_system_prompt = SYSTEM_PROMPT.replace("{device_context}", device_context_str)
-            
-            print(f"DEBUG: Context Injected -> \n{device_context_str}")
-           
-            # Mengambil history chat untuk konteks
-            messages_in_chat = Message.objects.filter(chat=chat).order_by("timestamp")
-            
-            groq_messages = [{"role": "system", "content": SYSTEM_PROMPT}] 
-            
-            for m in messages_in_chat:
-                if m.content and m.content.strip():
-                    groq_messages.append({"role": m.role, "content": m.content})
-
-            groq_messages.append({"role": "user", "content": groq_prompt})
-
-
-            model_text = os.getenv("GROQ_MODEL_TEXT", "openai/gpt-oss-120b") 
-
-            text_payload = {
-                "model": model_text,
-                "messages": groq_messages,
-                "temperature": 0.7 
-            }
-
-            groq_response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json=text_payload
-            )
-
-            groq_data = groq_response.json()
-
-            if "error" in groq_data:
-                print("Groq Text API Error:", groq_data["error"])
-                return Response({"error": f"Groq Text Error: {groq_data['error']['message']}"}, status=500)
-
-            raw_reply = groq_data["choices"][0]["message"]["content"]
-
-            # JSON GRAPH 
-            final_reply_text = raw_reply
-            extracted_topology = None
-
-            if "```json_graph" in raw_reply:
-                try:
-                    parts = raw_reply.split("```json_graph")
-                    if len(parts) > 1:
-                        json_content = parts[1].split("```")[0].strip()
-                        extracted_topology = json.loads(json_content)
-                        final_reply_text = parts[0].strip()
-                        print("Topology Graph extracted from Text Model!")
-                except Exception as e:
-                    print(f"Gagal parse JSON Graph: {e}")
-                    final_reply_text = raw_reply
-
-            topology_to_save = extracted_topology if extracted_topology else topology_json
-            if topology_to_save:
-                chat.topology_data = topology_to_save
-                chat.save()
-
-            # Simpan Jawaban Assistant
-            Message.objects.create(chat=chat, role="assistant", content=final_reply_text)
-
-            # Return response ke Frontend
-            pesan = Message.objects.filter(chat=chat).order_by("timestamp")
-            data_pesan = [
-                {
-                    "id": str(m.id),
-                    "role": m.role,
-                    "text": m.content,
-                    "image": m.image.url if m.image else None,
-                    "timestamp": m.timestamp,
-                }
-                for m in pesan
-            ]
-
-            return Response({
-                "chat_id": chat.id,
-                "title": chat.title,
-                "reply": final_reply_text,
-                "messages": data_pesan,
-                "topology": topology_to_save
-            }, status=200)
-
-        except Exception as e:
-            print(f"Exception in Text Generation Block: {str(e)}")
-            return Response({"error": f"Server Error (LLM): {str(e)}"}, status=500)
-
-
+   def post(self, request):
+      api_key = os.getenv("GROQ_API_KEY")
+      if not api_key:
+         return Response({"error": "API Key missing."}, status=500)
+         
+      user_message = request.data.get("prompt", "")
+          uploaded_image = request.FILES.get("image")
+          chat_id = request.data.get("chat_id")
+      
+          chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
+          
+          # Simpan pesan user
+          if uploaded_image:
+              Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
+          elif user_message:
+              Message.objects.create(chat=chat, role="user", content=user_message)
+      
+          # Context Perangkat dari DB
+          devices = NetworkDevice.objects.all()
+          device_context = "\n".join([f"- {d.name} ({d.vendor}) - IP: {d.host}" for d in devices])
+          formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
+      
+          # History obrolan
+          history = Message.objects.filter(chat=chat).order_by("timestamp")
+          messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
+          for m in history:
+              if m.content:
+                  messages_for_llm.append({"role": m.role, "content": m.content})
+      
+          try:
+              # =================================================================
+              # PROSES 1: VISION / TEXT ANALYZER
+              # =================================================================
+              proses_1_reply = ""
+      
+              if uploaded_image:
+                  print("▶️ Proses 1 (Vision) Bekerja...")
+                  uploaded_image.seek(0)
+                  image_bytes = uploaded_image.read()
+                  base64_str = base64.b64encode(image_bytes).decode('utf-8')
+                  final_image_data = f"data:{uploaded_image.content_type or 'image/jpeg'};base64,{base64_str}"
+                  
+                  vision_messages = [
+                      {"role": "user", "content": [
+                          {"type": "text", "text": "Analisis gambar topologi ini dan jelaskan perangkatnya. Buatkan juga format ```mermaid ... ``` nya."},
+                          {"type": "image_url", "image_url": {"url": final_image_data}}
+                      ]}
+                  ]
+                  
+                  proses_1_reply = call_groq_llm(
+                      api_key=api_key, 
+                      model="meta-llama/llama-4-scout-17b-16e-instruct", 
+                      messages=vision_messages
+                  )
+              else:
+                  print("▶️ Proses 1 (Text Analyzer) Bekerja...")
+                  proses_1_reply = call_groq_llm(
+                      api_key=api_key, 
+                      model="llama-3.3-70b-versatile", 
+                      messages=messages_for_llm
+                  )
+      
+              final_bot_reply = proses_1_reply
+      
+              # =================================================================
+              # ROUTING INTENT (Menangani hasil dari Proses 1)
+              # =================================================================
+              
+              if "[GENERATE_CONFIG]" in proses_1_reply:
+                  print("▶️ User Setuju. Proses 2 (Configurator) Mengambil Alih...")
+                  
+                  messages_for_proses_2 = [
+                      {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}"}
+                  ]
+                  for m in history:
+                      if m.content:
+                          messages_for_proses_2.append({"role": m.role, "content": m.content})
+                          
+                  final_bot_reply = call_groq_llm(
+                      api_key=api_key, 
+                      model="openai/gpt-oss-120b", 
+                      messages=messages_for_proses_2
+                  )
+              
+              # Melakukan monitoring / pengecekan
+              elif "[READ_DEVICE]" in proses_1_reply:
+                  print("▶️ Intent: Membaca status perangkat...")
+                  final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
+      
+              # Menambahkan perangkatbaru ke DB
+              elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
+                  # Blok parsing bisa ditambahkan di sini nanti jika ingin menyimpan ke NetworkDevice DB
+                  final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip()
+      
+              # Simpan balasan final ke database
+              Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
+      
+              # Return response
+              pesan = Message.objects.filter(chat=chat).order_by("timestamp")
+              data_pesan = [{"id": str(m.id), "role": m.role, "text": m.content, "timestamp": m.timestamp} for m in pesan]
+      
+              return Response({
+                  "chat_id": chat.id,
+                  "title": chat.title,
+                  "reply": final_bot_reply,
+                  "messages": data_pesan
+              }, status=200)
+      
+          except Exception as e:
+              print(f"Error in Multi-Agent Pipeline: {e}")
+              return Response({"error": f"Server Error: {str(e)}"}, status=500)
 
 
 @api_view(["GET"])
