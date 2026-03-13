@@ -46,7 +46,7 @@ const MermaidGraph = ({ chart }) => {
     return (
         <div 
             ref={graphRef} 
-            className="flex justify-center bg-white p-4 rounded-xl my-3 border shadow-sm text-black w-full overflow-x-auto"
+            className="flex justify-center bg-white p-4 rounded-xl my-3 border shadow-sm text-black max-w-[600px] overflow-x-auto [&>svg]:max-w-full [&>svg]:h-auto"
         >
             <span className="text-gray-400 text-sm animate-pulse">Menggambar topologi...</span>
         </div>
@@ -72,7 +72,6 @@ const MessageBubble = ({ message, BASE_URL }) => {
                     isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}
             >
-                {/* SOLUSI: Bungkus ReactMarkdown dengan div untuk class Tailwind */}
                 {message.text && (
                     <div className="prose prose-sm max-w-none text-current overflow-x-auto">
                         <ReactMarkdown
@@ -80,11 +79,9 @@ const MessageBubble = ({ message, BASE_URL }) => {
                             components={{
                                 code({ node, inline, className, children, ...props }) {
                                     const match = /language-(\w+)/.exec(className || "");
-                                    // Jika LLM memberikan tag mermaid, render sebagai grafis
                                     if (!inline && match && match[1] === "mermaid") {
                                         return <MermaidGraph chart={String(children).replace(/\n$/, "")} />;
                                     }
-                                    // Jika blok kode biasa (seperti CLI config)
                                     return !inline ? (
                                         <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2">
                                             <code className={className} {...props}>
@@ -108,7 +105,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                     <img
                         src={imageUrl}
                         alt="attachment"
-                        className="rounded-xl mt-3 max-w-full border border-gray-300 bg-white"
+                        className="rounded-xl mt-3 max-w-[400px] w-auto h-auto border border-gray-300 bg-white object-contain"
                         onError={(e) => { e.target.style.display = 'none'; }}
                     />
                 )}
