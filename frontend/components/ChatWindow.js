@@ -40,6 +40,7 @@ const MermaidGraph = ({ chart }) => {
         </div>
     );
 };
+
 const MessageBubble = ({ message, BASE_URL }) => {
     const isUser = message.role === "user";
     let imageUrl = null;
@@ -60,35 +61,36 @@ const MessageBubble = ({ message, BASE_URL }) => {
                     isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}
             >
-                {/* Render Markdown, Tabel, dan Grafis Mermaid */}
+                {/* SOLUSI: Bungkus ReactMarkdown dengan div untuk class Tailwind */}
                 {message.text && (
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        className="prose prose-sm max-w-none text-current"
-                        components={{
-                            code({ node, inline, className, children, ...props }) {
-                                const match = /language-(\w+)/.exec(className || "");
-                                // Jika LLM memberikan tag mermaid, render sebagai grafis
-                                if (!inline && match && match[1] === "mermaid") {
-                                    return <MermaidGraph chart={String(children).replace(/\n$/, "")} />;
-                                }
-                                // Jika blok kode biasa (seperti CLI config)
-                                return !inline ? (
-                                    <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2">
-                                        <code className={className} {...props}>
+                    <div className="prose prose-sm max-w-none text-current overflow-x-auto">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                                code({ node, inline, className, children, ...props }) {
+                                    const match = /language-(\w+)/.exec(className || "");
+                                    // Jika LLM memberikan tag mermaid, render sebagai grafis
+                                    if (!inline && match && match[1] === "mermaid") {
+                                        return <MermaidGraph chart={String(children).replace(/\n$/, "")} />;
+                                    }
+                                    // Jika blok kode biasa (seperti CLI config)
+                                    return !inline ? (
+                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2">
+                                            <code className={className} {...props}>
+                                                {children}
+                                            </code>
+                                        </pre>
+                                    ) : (
+                                        <code className="bg-gray-300 text-red-600 px-1 rounded font-mono text-xs" {...props}>
                                             {children}
                                         </code>
-                                    </pre>
-                                ) : (
-                                    <code className="bg-gray-300 text-red-600 px-1 rounded font-mono text-xs" {...props}>
-                                        {children}
-                                    </code>
-                                );
-                            },
-                        }}
-                    >
-                        {message.text}
-                    </ReactMarkdown>
+                                    );
+                                },
+                            }}
+                        >
+                            {message.text}
+                        </ReactMarkdown>
+                    </div>
                 )}
                 
                 {imageUrl && (
