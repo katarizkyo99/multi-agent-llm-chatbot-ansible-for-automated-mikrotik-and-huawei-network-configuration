@@ -324,7 +324,14 @@ export default function Home() {
                         previewUrl={previewUrl}
                     />
                 </ChatWindow>
-                {showHistory && <HistoryViewer configHistory={configHistory} setShowHistory={setShowHistory} />}
+                {showHistory && (
+                    <HistoryViewer 
+                        configHistory={configHistory} 
+                        setShowHistory={setShowHistory} 
+                        BASE_URL={BASE_URL}
+                        refreshHistory={fetchConfigHistory}
+                    />
+                )}
             </main>
         </div>
     );
