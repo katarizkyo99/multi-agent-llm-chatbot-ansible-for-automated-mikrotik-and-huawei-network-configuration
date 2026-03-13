@@ -176,9 +176,10 @@ class ChatView(APIView):
               final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
   
           # Menambahkan perangkatbaru ke DB
+          
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
-              print("▶️ Intent: Menambahkan perangkat ke DB...")
-              try:
+                print("▶️ Intent: Menambahkan perangkat ke DB...")
+                try:
                     # Pisahkan teks balasan dengan tag JSON
                     parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
                     bot_text = parts[0].strip()
@@ -204,7 +205,6 @@ class ChatView(APIView):
                 except Exception as e:
                     print(f"Gagal menyimpan perangkat: {e}")
                     final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + "\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat karena format data dari asisten tidak sesuai."
-
           # Simpan balasan final ke database
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
   
