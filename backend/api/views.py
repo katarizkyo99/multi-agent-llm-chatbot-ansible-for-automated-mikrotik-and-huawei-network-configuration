@@ -57,9 +57,11 @@ ATURAN KERJA PROSES 1 (SANGAT PENTING):
    JIKA ADA DATA YANG KURANG: Tanyakan secara spesifik data apa yang belum diisi.
    JIKA KE-6 DATA SUDAH LENGKAP: Kamu WAJIB berhenti bertanya dan hanya menambahkan satu baris teks tepat di akhir pesanmu dengan format murni seperti ini:
    [ADD_DEVICE_TO_DB] {"name": "...", "host": "...", "port": 22, "username": "...", "password": "...", "vendor": "..."}
-5. PENUTUP PESAN: Di akhir pesan (kecuali saat proses menambah perangkat), cukup tawarkan: "Apakah Anda ingin saya buatkan konfigurasinya sekarang?".
-6. EKSEKUSI KONFIGURASI: Jika user SETUJU untuk dikonfigurasi, KELUARKAN TAG: `[GENERATE_CONFIG]`.
-7. MEMBACA PERANGKAT: Jika user meminta mengecek perangkat, KELUARKAN TAG: `[READ_DEVICE] nama_perangkat, perintah`.
+5. If the user requests to delete a device from the database, make sure the device name is clear. If it is clear, EXIT TAG:
+   `[DELETE_DEVICE_FROM_DB] {“name”: “device_name”}`
+6. PENUTUP PESAN: Di akhir pesan (kecuali saat proses menambah perangkat), cukup tawarkan: "Apakah Anda ingin saya buatkan konfigurasinya sekarang?".
+7. EKSEKUSI KONFIGURASI: Jika user SETUJU untuk dikonfigurasi, KELUARKAN TAG: `[GENERATE_CONFIG]`.
+8. MEMBACA PERANGKAT: Jika user meminta mengecek perangkat, KELUARKAN TAG: `[READ_DEVICE] nama_perangkat, perintah`.
 """
 
 PROSES_1_PROMPT = """
@@ -240,6 +242,40 @@ class ChatView(APIView):
                     error_msg = str(e)
                     print(f"Gagal menyimpan perangkat: {error_msg}")
                     final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat. (Error: {error_msg})"
+
+
+
+          # Hapus Perangkat
+          
+          elif "[DELETE_DEVICE_FROM_DB]" in proses_1_reply:
+                print("▶️ Intent: Menghapus perangkat dari DB...")
+                import re
+                try:
+                    # Pisahkan teks balasan
+                    parts = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")
+                    bot_text = parts[0].strip()
+                    raw_json_str = parts[1].strip()
+                    
+                    json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
+                    if not json_match:
+                        raise ValueError("Format JSON dari asisten tidak ditemukan.")
+                    
+                    clean_json = json_match.group(0)
+                    device_data = json.loads(clean_json)
+                    device_name = device_data.get("name")
+                    
+                    deleted_count, _ = NetworkDevice.objects.filter(name__iexact=device_name).delete()
+                    
+                    if deleted_count > 0:
+                        final_bot_reply = bot_text + f"\n\n🗑️ **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
+                    else:
+                        final_bot_reply = bot_text + f"\n\n⚠️ **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Mungkin sudah terhapus atau namanya berbeda."
+                        
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"Gagal menghapus perangkat: {error_msg}")
+                    final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
+          
           # Simpan balasan final ke database
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
   
