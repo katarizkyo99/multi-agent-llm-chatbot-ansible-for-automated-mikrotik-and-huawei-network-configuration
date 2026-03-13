@@ -31,25 +31,45 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
     else:
         raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
 
+import re
+
+# ==============================================================================
+# FUNGSI PEMBERSIH MERMAID (Menghindari Parse Error di Frontend)
+# ==============================================================================
 def sanitize_mermaid(text):
     if "```mermaid" not in text:
         return text
     
     parts = text.split("```mermaid")
+    # Loop hanya pada blok kode mermaid (indeks ganjil)
     for i in range(1, len(parts), 2):
         subparts = parts[i].split("```")
         mermaid_code = subparts[0]
         
         cleaned_lines = []
         for line in mermaid_code.split('\n'):
-            def clean_label(match):
-                label = match.group(1)
-                label = label.replace("<br>", " ").replace("(", "").replace(")", "")
-                return f"|{label}|"
             
-            clean_line = re.sub(r'\|([^|]+)\|', clean_label, line)
-            cleaned_lines.append(clean_line)
+            # 1. Bersihkan teks di label garis |...|
+            def clean_edge(match):
+                label = match.group(1)
+                label = label.replace("<br>", " ").replace("(", "").replace(")", "").replace('"', '')
+                return f"|{label}|"
+            line = re.sub(r'\|([^|]+)\|', clean_edge, line)
+            
+            # 2. Bersihkan teks di dalam Node [...] 
+            # Jika LLM lupa pakai tanda kutip, kita hapus karakter spesialnya agar aman
+            def clean_node(match):
+                content = match.group(1)
+                # Hapus tanda kutip jika sudah ada agar tidak dobel, lalu hapus <br> dan ()
+                content = content.replace('"', '').replace("<br>", " ").replace("(", "").replace(")", "")
+                # Kembalikan dengan format yang 100% aman (tanpa karakter aneh)
+                return f"[{content}]"
+            
+            line = re.sub(r'\[(.*?)\]', clean_node, line)
+            
+            cleaned_lines.append(line)
         
+        # Gabungkan kembali
         subparts[0] = "\n".join(cleaned_lines)
         parts[i] = "```".join(subparts)
         
