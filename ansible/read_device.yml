@@ -1,0 +1,27 @@
+- name: Read Operational Data from Network Device
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    # 1. MIKROTIK
+    - name: Execute command on Mikrotik
+      community.routeros.command:
+        commands: "{{ config_cli }}"
+      when: ansible_network_os == "routeros"
+      register: mikrotik_read
+
+    # 2. HUAWEI 
+    - name: Execute command on Huawei
+      community.network.ce_command:
+        commands: "{{ config_cli }}"
+      when: ansible_network_os == 'ce'
+      register: huawei_read
+
+  
+    - name: Print Output
+      debug:
+        msg: >
+          {{
+             (mikrotik_read.stdout | default([])) +
+             (huawei_read.stdout | default([])) +
+          }}
