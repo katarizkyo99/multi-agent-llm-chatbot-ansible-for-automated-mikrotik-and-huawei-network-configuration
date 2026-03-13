@@ -177,9 +177,34 @@ class ChatView(APIView):
   
           # Menambahkan perangkatbaru ke DB
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
-              # Blok parsing bisa ditambahkan di sini nanti jika ingin menyimpan ke NetworkDevice DB
-              final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip()
-  
+              print("▶️ Intent: Menambahkan perangkat ke DB...")
+              try:
+                    # Pisahkan teks balasan dengan tag JSON
+                    parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
+                    bot_text = parts[0].strip()
+                    json_str = parts[1].strip()
+                    
+                    # Bersihkan jika LLM iseng menambahkan backticks markdown (```json ... ```)
+                    json_str = json_str.replace("```json", "").replace("```", "").strip()
+                    
+                    # Ubah string jadi dictionary
+                    device_data = json.loads(json_str)
+                    
+                    # Simpan langsung ke database Django
+                    NetworkDevice.objects.create(
+                        name=device_data.get("name"),
+                        host=device_data.get("host"),
+                        port=int(device_data.get("port", 22)),
+                        username=device_data.get("username"),
+                        password=device_data.get("password"),
+                        vendor=device_data.get("vendor").lower()
+                    )
+                    
+                    final_bot_reply = bot_text + "\n\n✅ **Berhasil:** Perangkat telah ditambahkan ke database!"
+                except Exception as e:
+                    print(f"Gagal menyimpan perangkat: {e}")
+                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + "\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat karena format data dari asisten tidak sesuai."
+
           # Simpan balasan final ke database
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
   
