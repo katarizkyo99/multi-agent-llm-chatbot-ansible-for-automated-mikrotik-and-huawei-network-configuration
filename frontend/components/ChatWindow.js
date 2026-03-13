@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import ConfirmPopup from "@/components/ConfirmPopup";
 import ReactMarkdown from "react-markdown";
