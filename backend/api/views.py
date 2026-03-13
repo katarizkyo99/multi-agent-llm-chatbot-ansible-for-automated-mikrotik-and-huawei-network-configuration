@@ -86,111 +86,111 @@ class ChatView(APIView):
          return Response({"error": "API Key missing."}, status=500)
          
       user_message = request.data.get("prompt", "")
-          uploaded_image = request.FILES.get("image")
-          chat_id = request.data.get("chat_id")
+      uploaded_image = request.FILES.get("image")
+      chat_id = request.data.get("chat_id")
+  
+      chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
       
-          chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
-          
-          # Simpan pesan user
+      # Simpan pesan user
+      if uploaded_image:
+          Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
+      elif user_message:
+          Message.objects.create(chat=chat, role="user", content=user_message)
+  
+      # Context Perangkat dari DB
+      devices = NetworkDevice.objects.all()
+      device_context = "\n".join([f"- {d.name} ({d.vendor}) - IP: {d.host}" for d in devices])
+      formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
+  
+      # History obrolan
+      history = Message.objects.filter(chat=chat).order_by("timestamp")
+      messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
+      for m in history:
+          if m.content:
+              messages_for_llm.append({"role": m.role, "content": m.content})
+  
+      try:
+          # =================================================================
+          # PROSES 1: VISION / TEXT ANALYZER
+          # =================================================================
+          proses_1_reply = ""
+  
           if uploaded_image:
-              Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
-          elif user_message:
-              Message.objects.create(chat=chat, role="user", content=user_message)
-      
-          # Context Perangkat dari DB
-          devices = NetworkDevice.objects.all()
-          device_context = "\n".join([f"- {d.name} ({d.vendor}) - IP: {d.host}" for d in devices])
-          formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
-      
-          # History obrolan
-          history = Message.objects.filter(chat=chat).order_by("timestamp")
-          messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
-          for m in history:
-              if m.content:
-                  messages_for_llm.append({"role": m.role, "content": m.content})
-      
-          try:
-              # =================================================================
-              # PROSES 1: VISION / TEXT ANALYZER
-              # =================================================================
-              proses_1_reply = ""
-      
-              if uploaded_image:
-                  print("▶️ Proses 1 (Vision) Bekerja...")
-                  uploaded_image.seek(0)
-                  image_bytes = uploaded_image.read()
-                  base64_str = base64.b64encode(image_bytes).decode('utf-8')
-                  final_image_data = f"data:{uploaded_image.content_type or 'image/jpeg'};base64,{base64_str}"
-                  
-                  vision_messages = [
-                      {"role": "user", "content": [
-                          {"type": "text", "text": "Analisis gambar topologi ini dan jelaskan perangkatnya. Buatkan juga format ```mermaid ... ``` nya."},
-                          {"type": "image_url", "image_url": {"url": final_image_data}}
-                      ]}
-                  ]
-                  
-                  proses_1_reply = call_groq_llm(
-                      api_key=api_key, 
-                      model="meta-llama/llama-4-scout-17b-16e-instruct", 
-                      messages=vision_messages
-                  )
-              else:
-                  print("▶️ Proses 1 (Text Analyzer) Bekerja...")
-                  proses_1_reply = call_groq_llm(
-                      api_key=api_key, 
-                      model="llama-3.3-70b-versatile", 
-                      messages=messages_for_llm
-                  )
-      
-              final_bot_reply = proses_1_reply
-      
-              # =================================================================
-              # ROUTING INTENT (Menangani hasil dari Proses 1)
-              # =================================================================
+              print("▶️ Proses 1 (Vision) Bekerja...")
+              uploaded_image.seek(0)
+              image_bytes = uploaded_image.read()
+              base64_str = base64.b64encode(image_bytes).decode('utf-8')
+              final_image_data = f"data:{uploaded_image.content_type or 'image/jpeg'};base64,{base64_str}"
               
-              if "[GENERATE_CONFIG]" in proses_1_reply:
-                  print("▶️ User Setuju. Proses 2 (Configurator) Mengambil Alih...")
-                  
-                  messages_for_proses_2 = [
-                      {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}"}
-                  ]
-                  for m in history:
-                      if m.content:
-                          messages_for_proses_2.append({"role": m.role, "content": m.content})
-                          
-                  final_bot_reply = call_groq_llm(
-                      api_key=api_key, 
-                      model="openai/gpt-oss-120b", 
-                      messages=messages_for_proses_2
-                  )
+              vision_messages = [
+                  {"role": "user", "content": [
+                      {"type": "text", "text": "Analisis gambar topologi ini dan jelaskan perangkatnya. Buatkan juga format ```mermaid ... ``` nya."},
+                      {"type": "image_url", "image_url": {"url": final_image_data}}
+                  ]}
+              ]
               
-              # Melakukan monitoring / pengecekan
-              elif "[READ_DEVICE]" in proses_1_reply:
-                  print("▶️ Intent: Membaca status perangkat...")
-                  final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
-      
-              # Menambahkan perangkatbaru ke DB
-              elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
-                  # Blok parsing bisa ditambahkan di sini nanti jika ingin menyimpan ke NetworkDevice DB
-                  final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip()
-      
-              # Simpan balasan final ke database
-              Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
-      
-              # Return response
-              pesan = Message.objects.filter(chat=chat).order_by("timestamp")
-              data_pesan = [{"id": str(m.id), "role": m.role, "text": m.content, "timestamp": m.timestamp} for m in pesan]
-      
-              return Response({
-                  "chat_id": chat.id,
-                  "title": chat.title,
-                  "reply": final_bot_reply,
-                  "messages": data_pesan
-              }, status=200)
-      
-          except Exception as e:
-              print(f"Error in Multi-Agent Pipeline: {e}")
-              return Response({"error": f"Server Error: {str(e)}"}, status=500)
+              proses_1_reply = call_groq_llm(
+                  api_key=api_key, 
+                  model="meta-llama/llama-4-scout-17b-16e-instruct", 
+                  messages=vision_messages
+              )
+          else:
+              print("▶️ Proses 1 (Text Analyzer) Bekerja...")
+              proses_1_reply = call_groq_llm(
+                  api_key=api_key, 
+                  model="llama-3.3-70b-versatile", 
+                  messages=messages_for_llm
+              )
+  
+          final_bot_reply = proses_1_reply
+  
+          # =================================================================
+          # ROUTING INTENT (Menangani hasil dari Proses 1)
+          # =================================================================
+          
+          if "[GENERATE_CONFIG]" in proses_1_reply:
+              print("▶️ User Setuju. Proses 2 (Configurator) Mengambil Alih...")
+              
+              messages_for_proses_2 = [
+                  {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}"}
+              ]
+              for m in history:
+                  if m.content:
+                      messages_for_proses_2.append({"role": m.role, "content": m.content})
+                      
+              final_bot_reply = call_groq_llm(
+                  api_key=api_key, 
+                  model="openai/gpt-oss-120b", 
+                  messages=messages_for_proses_2
+              )
+          
+          # Melakukan monitoring / pengecekan
+          elif "[READ_DEVICE]" in proses_1_reply:
+              print("▶️ Intent: Membaca status perangkat...")
+              final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
+  
+          # Menambahkan perangkatbaru ke DB
+          elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
+              # Blok parsing bisa ditambahkan di sini nanti jika ingin menyimpan ke NetworkDevice DB
+              final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip()
+  
+          # Simpan balasan final ke database
+          Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
+  
+          # Return response
+          pesan = Message.objects.filter(chat=chat).order_by("timestamp")
+          data_pesan = [{"id": str(m.id), "role": m.role, "text": m.content, "timestamp": m.timestamp} for m in pesan]
+  
+          return Response({
+              "chat_id": chat.id,
+              "title": chat.title,
+              "reply": final_bot_reply,
+              "messages": data_pesan
+          }, status=200)
+  
+      except Exception as e:
+          print(f"Error in Multi-Agent Pipeline: {e}")
+          return Response({"error": f"Server Error: {str(e)}"}, status=500)
 
 
 @api_view(["GET"])
