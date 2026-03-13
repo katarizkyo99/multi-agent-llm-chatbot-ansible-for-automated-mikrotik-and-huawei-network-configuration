@@ -3,21 +3,31 @@ import { FiPlus } from "react-icons/fi";
 import ConfirmPopup from "@/components/ConfirmPopup";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import mermaid from "mermaid";
 
 // Mermaid Graph
 const MermaidGraph = ({ chart }) => {
     const graphRef = useRef(null);
 
     useEffect(() => {
-        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-        if (graphRef.current) {
-            const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-            mermaid.render(id, chart).then(({ svg }) => {
+        const renderGraph = async () => {
+            try {
+                const mermaid = (await import("mermaid")).default;
+                
+                mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+                
+                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+                
+                const { svg } = await mermaid.render(id, chart);
                 if (graphRef.current) {
                     graphRef.current.innerHTML = svg;
                 }
-            }).catch(e => console.error("Mermaid Render Error:", e));
+            } catch (error) {
+                console.error("Mermaid Render Error:", error);
+            }
+        };
+
+        if (chart) {
+            renderGraph();
         }
     }, [chart]);
 
@@ -25,10 +35,11 @@ const MermaidGraph = ({ chart }) => {
         <div 
             ref={graphRef} 
             className="flex justify-center bg-white p-4 rounded-xl my-3 border shadow-sm text-black w-full overflow-x-auto"
-        />
+        >
+            <span className="text-gray-400 text-sm animate-pulse">Menggambar topologi...</span>
+        </div>
     );
 };
-
 const MessageBubble = ({ message, BASE_URL }) => {
     const isUser = message.role === "user";
     let imageUrl = null;
