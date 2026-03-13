@@ -445,9 +445,10 @@ def save_message(request):
 
 @api_view(["GET"])
 def get_riwayat_konfigurasi(request):
-    data = RiwayatKonfigurasi.objects.all()
+    data = RiwayatKonfigurasi.objects.all().order_by("-created_at")
     response_data = [
         {
+            "id": item.id,
             "config": item.config,
             "status": item.status,
             "created_at": item.created_at
@@ -471,7 +472,19 @@ def add_riwayat_konfigurasi(request):
 
     return Response({"message": "Riwayat disimpan"})
 
+@api_view(["DELETE"])
+def delete_riwayat_konfigurasi(request, riwayat_id):
+    try:
+        item = RiwayatKonfigurasi.objects.get(id=riwayat_id)
+        item.delete()
+        return Response({"message": "Riwayat berhasil dihapus."})
+    except RiwayatKonfigurasi.DoesNotExist:
+        return Response({"error": "Data tidak ditemukan."}, status=404)
 
+@api_view(["DELETE"])
+def delete_all_riwayat(request):
+    RiwayatKonfigurasi.objects.all().delete()
+    return Response({"message": "Semua riwayat berhasil dihapus."})
 
 @api_view(["POST"])
 def execute_config(request):
