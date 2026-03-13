@@ -42,21 +42,30 @@ LIST OF DEVICES CURRENTLY AVAILABLE IN THE DATABASE:
 {device_context}
 
 WORK PROCESS RULES 1:
-1. If the user describes >1 device or requests a topology, CREATE A TOPOLOGY using the Markdown ‘mermaid’ code block format with the ‘graph TD’ type.
-   MERMAID SYNTAX RULES (VERY IMPORTANT):
-   - If you want to label the port on the connection line, use the syntax `-->|text|`. DO NOT add the `>` symbol after the text label!
+1. If you mention a list of devices from the database, ALWAYS use the Markdown table format with the following columns: Device Name, IP Address, and Vendor.
+2. If the user describes >1 device or requests a topology, CREATE A TOPOLOGY using the Markdown ‘mermaid’ code block format with the ‘graph TD’ type.
    - CORRECT: `NodeA -->|ether1| NodeB`
    - INCORRECT: `NodeA -->|ether1|> NodeB`
-   Example format that you MUST follow:
+   Format example:
 ```mermaid
    graph TD
        Router0[“Router0\\n(11.11.11.11)”] -->|ether1| Switch0[“Switch0\\n(192.168.10.1)”]
-       Switch0 --> PC0[“PC0\\n(.10.2)”]
-2. Always ask the user: “Would you like me to create the configuration now?”.
-3. If the user requests to create a new device that does not exist in the database, tell them that you will add it, then add the tag [ADD_DEVICE_TO_DB] {“name”: “...”, “ip”: “...”, ‘vendor’: “...”} at the end of your message.
-4. If the user AGREES to the configuration, YOU MUST STOP THE CONVERSATION and ONLY ISSUE THE TAG: [GENERATE_CONFIG] so that Process 2 takes over.
-5. If the user requests to see the results on the device (e.g., “display the list of IPs on device A”), ISSUE THE TAG: [READ_DEVICE] device_name, command.
 
+3. IF THE USER REQUESTS TO ADD A NEW DEVICE:
+
+- The system requires 6 pieces of data: Name, Host (IP), Port, Username, Password, and Vendor.
+
+- If any data is missing (especially username/password/vendor), ASK the user first. Assume the default Port is 22.
+
+- If all 6 pieces of data are complete, OUTPUT THIS TAG AT THE END OF THE MESSAGE:
+[ADD_DEVICE_TO_DB] {“name”: “...”, “host”: “...”, “port”: 22, “username”: “...”, “password”: “...”, ‘vendor’: “...”}
+
+- While confirming with the user that the device has been added, ONLY DISPLAY the Name, Host, and Vendor in a table format (never display the username/password in the chat).
+
+4. Always offer the user: “Would you like me to create the configuration now?”.
+
+5. If the user AGREES to proceed with the configuration, YOU MUST STOP THE CHAT and ONLY ISSUE THE TAG: [GENERATE_CONFIG].
+6. If the user requests to view the results on the device (e.g., “display the list of IPs on device A”), OUTPUT TAG: [READ_DEVICE] device_name, command.
 """
 
 PROSES_2_PROMPT = """
@@ -101,7 +110,9 @@ class ChatView(APIView):
   
       # Context Perangkat dari DB
       devices = NetworkDevice.objects.all()
-      device_context = "\n".join([f"- {d.name} ({d.vendor}) - IP: {d.host}" for d in devices])
+      device_context = "| Nama Perangkat | IP Address | Vendor |\n|---|---|---|\n"
+      for d in devices:
+          device_context += f"| {d.name} | {d.host} | {d.vendor} |\n"
       formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
   
       # History obrolan
