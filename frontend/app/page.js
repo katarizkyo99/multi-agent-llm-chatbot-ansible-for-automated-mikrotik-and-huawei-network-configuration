@@ -124,8 +124,10 @@ export default function Home() {
             await fetch(`${BASE_URL}/api/chats/${chatIdToDelete}/delete/`, { method: "DELETE" });
             const updated = chats.filter((_, i) => i !== index);
             setChats(updated);
-            if (updated.length > 0) setActiveChatId(updated[0].id);
-            else setActiveChatId(null);
+            if (chatIdToDelete === activeChatId) {
+                setActiveChatId(null); 
+                localStorage.removeItem("activeChatId");
+            }
         } catch (err) { console.error("Gagal hapus chat:", err); }
     };
 
