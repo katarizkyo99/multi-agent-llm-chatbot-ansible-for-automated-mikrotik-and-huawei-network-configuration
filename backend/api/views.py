@@ -41,7 +41,7 @@ def sanitize_mermaid(text):
         return text
     
     parts = text.split("```mermaid")
-    # Loop hanya pada blok kode mermaid (indeks ganjil)
+    # Loop hanya pada blok kode mermaid
     for i in range(1, len(parts), 2):
         subparts = parts[i].split("```")
         mermaid_code = subparts[0]
@@ -49,22 +49,24 @@ def sanitize_mermaid(text):
         cleaned_lines = []
         for line in mermaid_code.split('\n'):
             
-            # 1. Bersihkan teks di label garis |...|
+            # 1. ATASI TYPO PANAH LLM: 
+            # Jika LLM iseng menulis ---|teks|> atau -->|teks|>, kita paksa buang tanda '>' di belakangnya
+            line = re.sub(r'---\|([^|]+)\|>', r'---| \1 |', line)
+            line = re.sub(r'-->\|([^|]+)\|>', r'-->| \1 |', line)
+            
+            # 2. BERSIHKAN TEKS DI LABEL GARIS |...|
             def clean_edge(match):
                 label = match.group(1)
-                label = label.replace("<br>", " ").replace("(", "").replace(")", "").replace('"', '')
+                # Sapu bersih <br>, kurung, kutip, dan ubah garis miring / jadi spasi
+                label = label.replace("<br>", " ").replace("(", "").replace(")", "").replace('"', '').replace("/", " ")
                 return f"|{label}|"
             line = re.sub(r'\|([^|]+)\|', clean_edge, line)
             
-            # 2. Bersihkan teks di dalam Node [...] 
-            # Jika LLM lupa pakai tanda kutip, kita hapus karakter spesialnya agar aman
+            # 3. BERSIHKAN TEKS DI DALAM NODE [...]
             def clean_node(match):
                 content = match.group(1)
-                # Hapus tanda kutip jika sudah ada agar tidak dobel, lalu hapus <br> dan ()
                 content = content.replace('"', '').replace("<br>", " ").replace("(", "").replace(")", "")
-                # Kembalikan dengan format yang 100% aman (tanpa karakter aneh)
                 return f"[{content}]"
-            
             line = re.sub(r'\[(.*?)\]', clean_node, line)
             
             cleaned_lines.append(line)
