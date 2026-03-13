@@ -132,7 +132,40 @@ class ChatView(APIView):
           Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
       elif user_message:
           Message.objects.create(chat=chat, role="user", content=user_message)
-  
+
+        # =================================================================
+        # AUTO-GENERATE TITLE CHAT
+        # =================================================================
+
+
+
+
+
+
+
+
+    
+      if chat.title == "Percakapan Baru":
+            if user_message:
+                try:
+                    print("▶️ Membuat judul obrolan...")
+                    title_messages = [
+                        {"role": "system", "content": "Create 3 to 5 short words in Indonesian that summarize the user's command. ONLY OUTPUT THE TITLE without quotation marks, explanations, or markdown."},
+                        {"role": "user", "content": user_message}
+                    ]
+                    new_title = call_groq_llm(api_key, "llama-3.1-8b-instant", title_messages, temperature=0.3)
+                    
+                    chat.title = new_title.replace('"', '').replace('*', '').strip()
+                except Exception as e:
+                    print(f"⚠️ Gagal membuat judul: {e}")
+                    kata_user = user_message.split()
+                    chat.title = " ".join(kata_user[:4]) + ("..." if len(kata_user) > 4 else "")
+            elif uploaded_image:
+                chat.title = "Analisis Topologi Gambar"
+            
+            chat.save()
+
+       
       # Context Perangkat dari DB
       devices = NetworkDevice.objects.all()
       device_context = "| Nama Perangkat | IP Address | Vendor |\n|---|---|---|\n"
