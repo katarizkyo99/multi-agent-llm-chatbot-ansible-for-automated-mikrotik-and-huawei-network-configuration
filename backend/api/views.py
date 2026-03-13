@@ -206,35 +206,40 @@ class ChatView(APIView):
               final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
   
           # Menambahkan perangkatbaru ke DB
-          
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
                 print("▶️ Intent: Menambahkan perangkat ke DB...")
+                import re 
                 try:
-                    # Pisahkan teks balasan dengan tag JSON
                     parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
                     bot_text = parts[0].strip()
-                    json_str = parts[1].strip()
+                    raw_json_str = parts[1].strip()
                     
-                    # Bersihkan jika LLM iseng menambahkan backticks markdown (```json ... ```)
-                    json_str = json_str.replace("```json", "").replace("```", "").strip()
+                    json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
+                    if not json_match:
+                        raise ValueError("Format JSON dari asisten tidak ditemukan.")
                     
-                    # Ubah string jadi dictionary
-                    device_data = json.loads(json_str)
+                    clean_json = json_match.group(0)
+                    device_data = json.loads(clean_json)
                     
-                    # Simpan langsung ke database Django
-                    NetworkDevice.objects.create(
-                        name=device_data.get("name"),
-                        host=device_data.get("host"),
-                        port=int(device_data.get("port", 22)),
-                        username=device_data.get("username"),
-                        password=device_data.get("password"),
-                        vendor=device_data.get("vendor").lower()
+                    raw_ip = device_data.get("host", "")
+                    clean_ip = raw_ip.split('/')[0].strip()
+                    
+                    NetworkDevice.objects.update_or_create(
+                        name=device_data.get("name"), 
+                        defaults={
+                            "host": clean_ip,
+                            "port": int(device_data.get("port")),
+                            "username": device_data.get("username"),
+                            "password": device_data.get("password"),
+                            "vendor": device_data.get("vendor").lower()
+                        }
                     )
                     
                     final_bot_reply = bot_text + "\n\n✅ **Berhasil:** Perangkat telah ditambahkan ke database!"
                 except Exception as e:
-                    print(f"Gagal menyimpan perangkat: {e}")
-                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + "\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat karena format data dari asisten tidak sesuai."
+                    error_msg = str(e)
+                    print(f"Gagal menyimpan perangkat: {error_msg}")
+                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat. (Error: {error_msg})"
           # Simpan balasan final ke database
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
   
