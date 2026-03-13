@@ -30,6 +30,30 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
     else:
         raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
 
+def sanitize_mermaid(text):
+    if "```mermaid" not in text:
+        return text
+    
+    parts = text.split("```mermaid")
+    for i in range(1, len(parts), 2):
+        subparts = parts[i].split("```")
+        mermaid_code = subparts[0]
+        
+        cleaned_lines = []
+        for line in mermaid_code.split('\n'):
+            def clean_label(match):
+                label = match.group(1)
+                label = label.replace("<br>", " ").replace("(", "").replace(")", "")
+                return f"|{label}|"
+            
+            clean_line = re.sub(r'\|([^|]+)\|', clean_label, line)
+            cleaned_lines.append(clean_line)
+        
+        subparts[0] = "\n".join(cleaned_lines)
+        parts[i] = "```".join(subparts)
+        
+    return "```mermaid".join(parts)
+
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
@@ -190,8 +214,10 @@ class ChatView(APIView):
                   model="llama-3.3-70b-versatile", 
                   messages=messages_for_llm
               )
-  
-          final_bot_reply = proses_1_reply
+
+          final_bot_reply = sanitize_mermaid(proses_1_reply)
+            
+          proses_1_reply = final_bot_reply
   
           # =================================================================
           # ROUTING INTENT (Menangani hasil dari Proses 1)
