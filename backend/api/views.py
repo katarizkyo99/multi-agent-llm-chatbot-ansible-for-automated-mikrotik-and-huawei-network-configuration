@@ -245,8 +245,7 @@ class ChatView(APIView):
 
 
 
-          # Hapus Perangkat
-          
+          # Hapus Perangkat  
           elif "[DELETE_DEVICE_FROM_DB]" in proses_1_reply:
                 print("▶️ Intent: Menghapus perangkat dari DB...")
                 import re
@@ -256,24 +255,30 @@ class ChatView(APIView):
                     bot_text = parts[0].strip()
                     raw_json_str = parts[1].strip()
                     
+                    # 1. CARI HANYA BLOK JSON
                     json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
                     if not json_match:
                         raise ValueError("Format JSON dari asisten tidak ditemukan.")
                     
                     clean_json = json_match.group(0)
                     device_data = json.loads(clean_json)
-                    device_name = device_data.get("name")
                     
+                    # 2. BERSIHKAN NAMA PERANGKAT (Hapus spasi ekstra di awal/akhir)
+                    device_name = device_data.get("name", "").strip()
+                    print(f"🔍 DEBUG: Mencari perangkat dengan nama persis: '{device_name}'")
+                    
+                    # 3. HAPUS DARI DATABASE
                     deleted_count, _ = NetworkDevice.objects.filter(name__iexact=device_name).delete()
+                    print(f"🔍 DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
                     
                     if deleted_count > 0:
                         final_bot_reply = bot_text + f"\n\n🗑️ **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
                     else:
-                        final_bot_reply = bot_text + f"\n\n⚠️ **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Mungkin sudah terhapus atau namanya berbeda."
+                        final_bot_reply = bot_text + f"\n\n⚠️ **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Pastikan namanya diketik dengan benar."
                         
                 except Exception as e:
                     error_msg = str(e)
-                    print(f"Gagal menghapus perangkat: {error_msg}")
+                    print(f"❌ Gagal menghapus perangkat: {error_msg}")
                     final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
           
           # Simpan balasan final ke database
