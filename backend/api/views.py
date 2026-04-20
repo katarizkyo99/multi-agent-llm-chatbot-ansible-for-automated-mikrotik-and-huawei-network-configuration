@@ -146,6 +146,7 @@ Konfigurasi:
 
 
 class ChatView(APIView):
+   start_time = time.time()
    def post(self, request):
       api_key = os.getenv("GROQ_API_KEY")
       if not api_key:
