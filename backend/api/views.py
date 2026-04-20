@@ -351,7 +351,12 @@ class ChatView(APIView):
           # Return response
           pesan = Message.objects.filter(chat=chat).order_by("timestamp")
           data_pesan = [{"id": str(m.id), "role": m.role, "text": m.content, "timestamp": m.timestamp} for m in pesan]
-  
+
+          end_time = time.time()
+          execution_time = end_time - start_time
+        
+          print(f"\n[LOG PENGUJIAN] Waktu Respons LLM: {execution_time:.3f} detik\n")
+          
           return Response({
               "chat_id": chat.id,
               "title": chat.title,
