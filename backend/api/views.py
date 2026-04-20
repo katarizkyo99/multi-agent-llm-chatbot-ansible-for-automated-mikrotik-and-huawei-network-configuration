@@ -146,8 +146,8 @@ Konfigurasi:
 
 
 class ChatView(APIView):
-   start_time = time.time()
    def post(self, request):
+      start_time = time.time()
       api_key = os.getenv("GROQ_API_KEY")
       if not api_key:
          return Response({"error": "API Key missing."}, status=500)
@@ -167,15 +167,7 @@ class ChatView(APIView):
         # =================================================================
         # AUTO-GENERATE TITLE CHAT
         # =================================================================
-
-
-
-
-
-
-
-
-    
+   
       if chat.title == "Percakapan Baru":
             if user_message:
                 try:
