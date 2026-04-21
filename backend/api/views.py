@@ -211,7 +211,7 @@ class ChatView(APIView):
               print("▶️ Proses 1 (Text Analyzer) Bekerja...")
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="openai/gpt-oss-120bt", 
+                  model="openai/gpt-oss-120b", 
                   messages=messages_for_llm
               )
 
@@ -235,7 +235,7 @@ class ChatView(APIView):
                       
               final_bot_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="openai/gpt-oss-120b", 
+                  model="llama-3.3-70b-versatile", 
                   messages=messages_for_proses_2
               )
           
