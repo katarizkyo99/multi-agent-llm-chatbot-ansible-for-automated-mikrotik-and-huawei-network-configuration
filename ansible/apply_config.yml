@@ -20,8 +20,9 @@
 
     # HUAWEI
     - name: Apply config to Huawei
-      community.network.ce_config:
-        lines: "{{ config_cli }}"
+      ansible.netcommon.cli_command:
+        command: "{{ item }}"
+      loop: "{{ config_cli }}"
       when: ansible_network_os == "generic"
       register: huawei_result
       
