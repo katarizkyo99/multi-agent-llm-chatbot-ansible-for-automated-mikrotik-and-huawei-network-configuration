@@ -22,8 +22,7 @@
     - name: Apply config to Huawei
       ansible.netcommon.cli_command:
         command: "{{ item }}"
-      loop: "{{ config_cli | from_yaml}}"
-      when: ansible_network_os == "generic"
+      loop: "{{ config_cli.split('\n') | map('trim') | reject('equalto', '') | list }}"      when: ansible_network_os == "generic"
       register: huawei_result
       
       failed_when: 
