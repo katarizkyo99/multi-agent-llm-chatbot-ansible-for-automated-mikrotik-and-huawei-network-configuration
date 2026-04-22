@@ -22,4 +22,9 @@
     - name: Apply config to Huawei
       community.network.ce_config:
         lines: "{{ config_cli }}"
-      when: ansible_network_os == 'ce'
+      when: ansible_network_os == "generic"
+      register: huawei_result
+      
+      failed_when: 
+        - '"Error:" in huawei_result.stdout | default("")'
+        - '"Unrecognized command" in huawei_result.stdout | default("")'
