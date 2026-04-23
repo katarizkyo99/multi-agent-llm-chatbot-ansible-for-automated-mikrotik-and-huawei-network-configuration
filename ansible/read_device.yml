@@ -1,27 +1,37 @@
-- name: Read Operational Data from Network Device
+- name: Read data from network device
   hosts: all
   gather_facts: no
 
   tasks:
-    # 1. MIKROTIK
-    - name: Execute command on Mikrotik
+    # MIKROTIK
+    - name: Run command on Mikrotik
       community.routeros.command:
-        commands: "{{ config_cli }}"
+        commands: "{{ target_command }}"
       when: ansible_network_os == "routeros"
-      register: mikrotik_read
+      register: mikrotik_out
 
-    # 2. HUAWEI 
-    - name: Execute command on Huawei
+    # HUAWEI CE
+    - name: Run command on Huawei CE
       community.network.ce_command:
-        commands: "{{ config_cli }}"
+        commands: "{{ target_command }}"
       when: ansible_network_os == 'ce'
-      register: huawei_read
+      register: ce_out
 
-  
-    - name: Print Output
+    # HUAWEI VRP
+    - name: Run command on Huawei VRP
+      community.network.vrp_command:
+        commands: "{{ target_command }}"
+      when: ansible_network_os == 'vrp'
+      register: vrp_out
+
+    # Menampilkan Hasil
+    - name: "Output Eksekusi"
       debug:
         msg: >
-          {{
-             (mikrotik_read.stdout | default([])) +
-             (huawei_read.stdout | default([])) +
-          }}
+          {% if ansible_network_os == 'routeros' %}
+          {{ mikrotik_out.stdout_lines | default('Tidak ada output') }}
+          {% elif ansible_network_os == 'ce' %}
+          {{ ce_out.stdout | default('Tidak ada output') }}
+          {% elif ansible_network_os == 'vrp' %}
+          {{ vrp_out.stdout | default('Tidak ada output') }}
+          {% endif %}
