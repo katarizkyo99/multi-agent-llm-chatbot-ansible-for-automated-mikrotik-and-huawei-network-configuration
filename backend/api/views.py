@@ -31,18 +31,14 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
         return resp.json()["choices"][0]["message"]["content"].strip()
     else:
         raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
-
-import re
-
 # ==============================================================================
-# FUNGSI PEMBERSIH MERMAID (Menghindari Parse Error di Frontend)
+# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
 def sanitize_mermaid(text):
     if "```mermaid" not in text:
         return text
     
     parts = text.split("```mermaid")
-    # Loop hanya pada blok kode mermaid
     for i in range(1, len(parts), 2):
         subparts = parts[i].split("```")
         mermaid_code = subparts[0]
@@ -50,12 +46,11 @@ def sanitize_mermaid(text):
         cleaned_lines = []
         for line in mermaid_code.split('\n'):
             
-            # 1. ATASI TYPO PANAH LLM: 
-            # Jika LLM iseng menulis ---|teks|> atau -->|teks|>, kita paksa buang tanda '>' di belakangnya
+            # HANDLE TYPO PANAH LLM: 
             line = re.sub(r'---\|([^|]+)\|>', r'---| \1 |', line)
             line = re.sub(r'-->\|([^|]+)\|>', r'-->| \1 |', line)
             
-            # 2. BERSIHKAN TEKS DI LABEL GARIS |...|
+            # CLEANING TEKS DI LABEL GARIS |...|
             def clean_edge(match):
                 label = match.group(1)
                 # Sapu bersih <br>, kurung, kutip, dan ubah garis miring / jadi spasi
@@ -63,7 +58,7 @@ def sanitize_mermaid(text):
                 return f"|{label}|"
             line = re.sub(r'\|([^|]+)\|', clean_edge, line)
             
-            # 3. BERSIHKAN TEKS DI DALAM NODE [...]
+            # CLEANING TEKS DI DALAM NODE [...]
             def clean_node(match):
                 content = match.group(1)
                 content = content.replace('"', '').replace("<br>", " ").replace("(", "").replace(")", "")
@@ -72,7 +67,6 @@ def sanitize_mermaid(text):
             
             cleaned_lines.append(line)
         
-        # Gabungkan kembali
         subparts[0] = "\n".join(cleaned_lines)
         parts[i] = "```".join(subparts)
         
@@ -104,7 +98,6 @@ RULES:
 6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet.
 7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
 8. Read Device Status: Output exactly: `[READ_DEVICE] name, command`.
-
 """
 
 PROSES_2_PROMPT = """
@@ -112,7 +105,7 @@ Role: Multi-Vendor Network Engineer.
 Task: Output raw CLI scripts based on chat history. No markdown blocks, no greetings.
 
 VENDOR RULES:
-- HUAWEI: MUST ALWAYS start with 'system-view'. MUST ALWAYS end with 'return'. Use 'undo shutdown'. If L2, use 'portswitch'.
+- HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. If L2, use 'portswitch'.
 - MIKROTIK: Use absolute paths (e.g., /ip address add...).
 
 REQUIRED OUTPUT FORMAT:
@@ -123,7 +116,9 @@ Konfigurasi:
 [CLI command 2]
 """
 
-
+# ==============================================================================
+# PIPELINE CHATBOT 
+# ==============================================================================
 class ChatView(APIView):
    def post(self, request):
       start_time = time.time()
@@ -134,23 +129,21 @@ class ChatView(APIView):
       user_message = request.data.get("prompt", "")
       uploaded_image = request.FILES.get("image")
       chat_id = request.data.get("chat_id")
-  
+      
+      # Mengambil chat / membuat percakapan baru
       chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
       
-      # Simpan pesan user
+      # Menyimpan pesan user
       if uploaded_image:
           Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
       elif user_message:
           Message.objects.create(chat=chat, role="user", content=user_message)
 
-        # =================================================================
-        # AUTO-GENERATE TITLE CHAT
-        # =================================================================
-   
+      # Membuat Judul Otomatis
       if chat.title == "Percakapan Baru":
             if user_message:
                 try:
-                    print("▶️ Membuat judul obrolan...")
+                    print("Membuat judul obrolan...")
                     title_messages = [
                         {"role": "system", "content": "Create 3 to 5 short words in Indonesian that summarize the user's command. ONLY OUTPUT THE TITLE without quotation marks, explanations, or markdown."},
                         {"role": "user", "content": user_message}
@@ -159,7 +152,7 @@ class ChatView(APIView):
                     
                     chat.title = new_title.replace('"', '').replace('*', '').strip()
                 except Exception as e:
-                    print(f"⚠️ Gagal membuat judul: {e}")
+                    print(f"Gagal membuat judul: {e}")
                     kata_user = user_message.split()
                     chat.title = " ".join(kata_user[:4]) + ("..." if len(kata_user) > 4 else "")
             elif uploaded_image:
@@ -168,14 +161,14 @@ class ChatView(APIView):
             chat.save()
 
        
-      # Context Perangkat dari DB
+      # Membuat Konteks dari DB dan History Chat
       devices = NetworkDevice.objects.all()
       device_context = "| Nama Perangkat | IP Address | Vendor |\n|---|---|---|\n"
       for d in devices:
           device_context += f"| {d.name} | {d.host} | {d.vendor} |\n"
       formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
   
-      # History obrolan
+      # Mengambil 10 pesan terakhir untuk konteks LLM
       raw_history = Message.objects.filter(chat=chat).order_by("timestamp")
       history = list(raw_history)[-10:]
       messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
@@ -185,10 +178,10 @@ class ChatView(APIView):
   
       try:
           # =================================================================
-          # PROSES 1: VISION / TEXT ANALYZER
+          # PROSES 1: GAMBAR / TEXT ANALYZER
           # =================================================================
           proses_1_reply = ""
-  
+          # Proses Gambar
           if uploaded_image:
               print("▶️ Proses 1 (Vision) Bekerja...")
               uploaded_image.seek(0)
@@ -209,6 +202,7 @@ class ChatView(APIView):
                   messages=vision_messages
               )
           else:
+              # Proses Teks
               print("▶️ Proses 1 (Text Analyzer) Bekerja...")
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
@@ -221,7 +215,7 @@ class ChatView(APIView):
           proses_1_reply = final_bot_reply
   
           # =================================================================
-          # ROUTING INTENT (Menangani hasil dari Proses 1)
+          # ROUTING INTENT (Menjalankan Aksi Sesuai Tag dari Agen 1)
           # =================================================================
           
           if "[GENERATE_CONFIG]" in proses_1_reply:
@@ -240,12 +234,12 @@ class ChatView(APIView):
                   messages=messages_for_proses_2
               )
           
-          # Melakukan monitoring / pengecekan
+          # Membaca status/konfigurasi perangkat jaringan
           elif "[READ_DEVICE]" in proses_1_reply:
               print("▶️ Intent: Membaca status perangkat...")
               final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
   
-          # Menambahkan perangkatbaru ke DB
+          # Menambahkan perangkat baru ke DB
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
                 print("▶️ Intent: Menambahkan perangkat ke DB...")
                 import re 
@@ -283,17 +277,15 @@ class ChatView(APIView):
 
 
 
-          # Hapus Perangkat  
+          # Menghapus Perangkat  
           elif "[DELETE_DEVICE_FROM_DB]" in proses_1_reply:
                 print("▶️ Intent: Menghapus perangkat dari DB...")
                 import re
                 try:
-                    # Pisahkan teks balasan
                     parts = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")
                     bot_text = parts[0].strip()
                     raw_json_str = parts[1].strip()
                     
-                    # 1. CARI HANYA BLOK JSON
                     json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
                     if not json_match:
                         raise ValueError("Format JSON dari asisten tidak ditemukan.")
@@ -301,11 +293,9 @@ class ChatView(APIView):
                     clean_json = json_match.group(0)
                     device_data = json.loads(clean_json)
                     
-                    # 2. BERSIHKAN NAMA PERANGKAT (Hapus spasi ekstra di awal/akhir)
                     device_name = device_data.get("name", "").strip()
                     print(f"🔍 DEBUG: Mencari perangkat dengan nama persis: '{device_name}'")
                     
-                    # 3. HAPUS DARI DATABASE
                     deleted_count, _ = NetworkDevice.objects.filter(name__iexact=device_name).delete()
                     print(f"🔍 DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
                     
@@ -319,10 +309,9 @@ class ChatView(APIView):
                     print(f"❌ Gagal menghapus perangkat: {error_msg}")
                     final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
           
-          # Simpan balasan final ke database
+          # Penyimpanan Pesan ke DB dan Pemrosesan Respons Final
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
   
-          # Return response
           pesan = Message.objects.filter(chat=chat).order_by("timestamp")
           data_pesan = [{"id": str(m.id), "role": m.role, "text": m.content, "timestamp": m.timestamp} for m in pesan]
 
@@ -342,6 +331,9 @@ class ChatView(APIView):
           print(f"Error in Multi-Agent Pipeline: {e}")
           return Response({"error": f"Server Error: {str(e)}"}, status=500)
 
+# ==============================================================================
+# SECTION 4: CRUD CHAT DAN PESAN
+# ==============================================================================
 
 @api_view(["GET"])
 def get_chats(request):
@@ -350,16 +342,11 @@ def get_chats(request):
         {"id": str(c.id), "title": c.title, "created_at": c.created_at}
         for c in chats
     ]
-    
     return JsonResponse(data, safe=False)
 
-
 @api_view(["GET"])
-def get_chat_messages(request, chat_id):
-    
-    messages = Message.objects.filter(chat_id=chat_id).order_by("timestamp")
-    
-    
+def get_chat_messages(request, chat_id):    
+    messages = Message.objects.filter(chat_id=chat_id).order_by("timestamp")  
     chat = Chat.objects.filter(id=chat_id).first()
     topology = chat.topology_data if chat else None
 
@@ -372,9 +359,7 @@ def get_chat_messages(request, chat_id):
             "timestamp": m.timestamp,
         }
         for m in messages
-    ]
-    
-    
+    ]    
     return Response({
         "messages": msg_data,
         "topology": topology 
@@ -385,7 +370,6 @@ def create_chat(request):
     chat = Chat.objects.create(title="Percakapan Baru")
     return Response({"id": chat.id, "title": chat.title})
 
-
 @api_view(["DELETE"])
 def delete_chat(request, chat_id):
     try:
@@ -394,7 +378,6 @@ def delete_chat(request, chat_id):
         return Response({"message": "Chat berhasil dihapus."})
     except Chat.DoesNotExist:
         return Response({"error": "Chat tidak ditemukan."}, status=404)
-
 
 @api_view(["POST"])
 def save_message(request):
@@ -420,8 +403,7 @@ def save_message(request):
         }
     })
 
-
-
+# Manajemen Riwayat Konfigurasi
 @api_view(["GET"])
 def get_riwayat_konfigurasi(request):
     data = RiwayatKonfigurasi.objects.all().order_by("-created_at")
@@ -465,14 +447,13 @@ def delete_all_riwayat(request):
     RiwayatKonfigurasi.objects.all().delete()
     return Response({"message": "Semua riwayat berhasil dihapus."})
 
+
+# Eksekusi Ansible
 @api_view(["POST"])
 def execute_config(request):
     try:
         print("=== RAW REQUEST DATA ===", request.data)
-        
-        # ==========================================
-        # PARSING INPUT
-        # ==========================================
+        # Parsing Input dari Frontend untuk Memisahkan mana yang "Target" dan mana yang "Konfigurasi"
         raw = request.data.get("config_cli", "")
         tasks = [] 
         
@@ -515,7 +496,7 @@ def execute_config(request):
             return Response({"error": "Format input salah atau tidak ada target ditemukan."}, status=400)
 
         # ==========================================
-        # EKSEKUSI ANSIBLE 
+        # EKSEKUSI TASK ANSIBLE 
         # ==========================================
         final_results = []
 
@@ -525,20 +506,21 @@ def execute_config(request):
             
             print(f"\n[Task {i+1}/{len(tasks)}] Memproses: {target_name_input}")
 
-            # LOGIKA PENCARIAN PERANGKAT 
+            # LOGIKA PENCARIAN TARGET PERANGKAT 
             final_target_name = None
             try:
+                # Cari Via Alias
                 alias_entry = DeviceAlias.objects.get(alias_name__iexact=target_name_input)
                 final_target_name = alias_entry.device.name
                 print(f" Ditemukan via Alias: {final_target_name}")
             except DeviceAlias.DoesNotExist:
                 try:
-                    # 2. Cek Direct
+                    # Cari Via Direct
                     device_obj = NetworkDevice.objects.get(name__iexact=target_name_input)
                     final_target_name = device_obj.name
                     print(f" Ditemukan via Direct: {final_target_name}")
                 except NetworkDevice.DoesNotExist:
-                    # 3. Cek Fuzzy
+                    # 3. Cari Via Fuzzy
                     clean_target = target_name_input.lower().replace(" ", "").replace("_", "").replace("-", "")
                     all_devices = NetworkDevice.objects.all()
                     for d in all_devices:
@@ -554,12 +536,13 @@ def execute_config(request):
                 final_results.append({"target": target_name_input, "status": "failed", "error": err_msg})
                 continue 
 
-            # ANSIBLE
+            # Eksekusi Playbook Ansible
             try:
                 device = NetworkDevice.objects.get(name=final_target_name)
                 raw_lines = config_cli_input.splitlines()
 
-                if device.vendor == 'ce':
+                # Cleaning CLI untuk Vendor Huawei
+                if device.vendor.lower() in ['ce', 'vrp']:
                     cleaned_list = [
                         line.strip() for line in raw_lines 
                         if line.strip().lower() not in ['system-view', 'quit', 'return', 'sys', 'q']
@@ -573,7 +556,8 @@ def execute_config(request):
                    
                 print(f"Payload tipe: {type(final_config_payload)}") 
                 print(f"Payload isi: {final_config_payload}")  
-               
+
+                # Pembuatan File Temporary untuk Variabel dan Inventory
                 vars_file_path = f"/tmp/vars_{final_target_name.replace(' ', '_')}.json"
 
                 with open(vars_file_path, "w") as vars_f:
@@ -585,8 +569,9 @@ def execute_config(request):
                 safe_pass = device.password.replace("\\", "\\\\") if device.password else ""
                 safe_host = device.host.replace("\\", "\\\\")
                 
-                ansible_os = device.vendor
+                ansible_os = device.vendor.lower()
 
+                # Menulis file Inventory Ansible secara dinamis
                 with open(inventory_file, "w") as f:
                     f.write("[routers]\n")
                     f.write(f"{final_target_name.replace(' ', '_')} "
@@ -599,6 +584,8 @@ def execute_config(request):
                             f"ansible_connection=network_cli "
                             f"ansible_command_timeout=60 "
                             f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc'\n")
+                
+                # Menjalankan Subprocess Playbook Ansible
                 playbook_path = "/home/kyo/ta/ansible/apply_config.yml"   
                 playbook_cmd = [
                     "ansible-playbook",
@@ -622,11 +609,13 @@ def execute_config(request):
                 print(result.stderr if result.stderr else "[KOSONG]")
                 print(f"{'='*60}\n")
 
+                # Cleaning File Temporary
                 if os.path.exists(inventory_file):
                     os.remove(inventory_file)
                 if os.path.exists(vars_file_path):
                     os.remove(vars_file_path)
-             
+                    
+               # Merekam Hasil (success/error)
                 final_results.append({
                     "target": final_target_name,
                     "status": "success" if result.returncode == 0 else "error",
@@ -649,31 +638,7 @@ def execute_config(request):
         import traceback
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
-
-
-
-
-@api_view(["POST"])
-def ping_device(request):
-    ip = request.data.get("ip")
-
-    if not ip:
-        return Response({"error": "IP tidak diberikan"}, status=400)
-
-    try:
-        result = subprocess.run(
-            ["ping", "-c", "4", ip],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        return Response({
-            "output": result.stdout,
-            "success": (result.returncode == 0)
-        })
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
-
+#
 @api_view(["GET"])
 def get_network_devices(request):
     try:
