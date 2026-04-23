@@ -89,7 +89,7 @@ RULES:
    - Node format: `ID["Name\\n(IP)"]` (Must use \\n).
    - Lines: `-->` or `---` (No labels preferred).
    - If label needed: ONE word only (e.g., `|G0/0|`). NO spaces, IPs, VLAN, or ().
-4. Add Device: Need name, host, port, username, password, vendor ('routeros' or 'ce').
+4. Add Device: Need name, host, port, username, password, vendor ('routeros', 'ce', or 'vrp').
    - If missing: Ask for it.
    - If complete, output exactly at end:
      [ADD_DEVICE_TO_DB] {"name":"...", "host":"...", "port":"...", "username":"...", "password":"...", "vendor":"..."}
