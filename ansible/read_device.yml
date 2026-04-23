@@ -3,35 +3,35 @@
   gather_facts: no
 
   tasks:
-    # MIKROTIK
+    # 1. MIKROTIK
     - name: Run command on Mikrotik
       community.routeros.command:
         commands: "{{ target_command }}"
-      when: ansible_network_os == "routeros"
+      when: ansible_network_os == "community.routeros.routeros"
       register: mikrotik_out
 
-    # HUAWEI CE
+    # 2. HUAWEI CE
     - name: Run command on Huawei CE
       community.network.ce_command:
         commands: "{{ target_command }}"
-      when: ansible_network_os == 'ce'
+      when: ansible_network_os == "community.network.ce"
       register: ce_out
 
-    # HUAWEI VRP
+    # 3. HUAWEI VRP (Gunakan modul universal)
     - name: Run command on Huawei VRP
       ansible.netcommon.cli_command:
-        commands: "{{ target_command }}"
-      when: ansible_network_os == 'vrp'
+        command: "{{ target_command }}"  # <--- Perhatikan: Tanpa 's' di belakangnya
+      when: ansible_network_os == "community.network.vrp"
       register: vrp_out
 
-    # Menampilkan Hasil
+    # 4. TAMPILKAN HASILNYA KE STDOUT
     - name: "Output Eksekusi"
       debug:
         msg: >
-          {% if ansible_network_os == 'routeros' %}
+          {% if ansible_network_os == 'community.routeros.routeros' %}
           {{ mikrotik_out.stdout[0] | default('Tidak ada output') }}
-          {% elif ansible_network_os == 'ce' %}
+          {% elif ansible_network_os == 'community.network.ce' %}
           {{ ce_out.stdout[0] | default(ce_out.stdout | default('Tidak ada output')) }}
-          {% elif ansible_network_os == 'vrp' %}
+          {% elif ansible_network_os == 'community.network.vrp' %}
           {{ vrp_out.stdout | default('Tidak ada output') }}
           {% endif %}
