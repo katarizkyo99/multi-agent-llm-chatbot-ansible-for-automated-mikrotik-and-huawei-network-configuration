@@ -251,9 +251,30 @@ class ChatView(APIView):
                       
                       # Memanggil fungsi eksekutor Ansible Read
                       ansible_output = execute_read_device(target_device, target_command)
-                      
-                      final_bot_reply = f"✅ Mengambil data dari **{target_device}** (Perintah: `{target_command}`):\n\n"
-                      final_bot_reply += f"```text\n{ansible_output}\n```"
+
+                      if "❌" in ansible_output or "Gagal" in ansible_output:
+                          final_bot_reply = ansible_output
+                      else:
+                          print("▶️ Memformat output raw menjadi tabel Markdown...")
+                          format_messages = [
+                              {"role": "system", "content": "Kamu adalah asisten jaringan. Ubah raw text output dari router berikut menjadi tabel Markdown yang rapi. Hapus baris informasi yang tidak relevan (seperti 'Flags: ...'). HANYA berikan output berupa tabel Markdown, tanpa teks pembuka/penutup apapun."},
+                              {"role": "user", "content": ansible_output}
+                          ]
+                          
+                          try:
+                              table_output = call_groq_llm(api_key, "llama-3.1-8b-instant", format_messages, temperature=0.1)
+                              
+                              final_bot_reply = (
+                                  f"✅ **Data Perangkat {target_device}**\n"
+                                  f"- **Perintah:** `{target_command}`\n\n"
+                                  f"{table_output}"
+                              )
+                          except Exception:
+                              final_bot_reply = (
+                                  f"✅ **Data Perangkat {target_device}**\n"
+                                  f"- **Perintah:** `{target_command}`\n\n"
+                                  f"```text\n{ansible_output}\n```"
+                              )
                   else:
                       final_bot_reply = "⚠️ Maaf, asisten gagal memformat perintah baca perangkat."
                       
@@ -709,13 +730,15 @@ def execute_read_device(target_name_input, command):
                     f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'\n")
 
         # 3. JALANKAN ANSIBLE READ
-        playbook_path = "/home/kyo/ta/ansible/read_device.yml" # Sesuaikan path file
+        playbook_path = "/home/kyo/ta/ansible/read_device.yml"
         playbook_cmd = [
             "ansible-playbook", playbook_path,
             "-i", inventory_file,
             "-e", f"@{vars_file_path}"
         ]
 
+        custom_env = {**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False", "ANSIBLE_STDOUT_CALLBACK": "json"}
+        
         result = subprocess.run(
             playbook_cmd,
             env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False"},
@@ -727,9 +750,23 @@ def execute_read_device(target_name_input, command):
         if os.path.exists(inventory_file): os.remove(inventory_file)
         if os.path.exists(vars_file_path): os.remove(vars_file_path)
 
-        # 4. KEMBALIKAN HASIL OUTPUT
         if result.returncode == 0:
-            return result.stdout
+            try:
+                parsed_json = json.loads(result.stdout)
+                raw_output = "Tidak ada output"
+                
+                for play in parsed_json.get("plays", []):
+                    for task in play.get("tasks", []):
+                        if task.get("task", {}).get("name") == "Output Eksekusi":
+                            host_res = task.get("hosts", {}).get(final_target_name, {})
+                            raw_output = host_res.get("msg", raw_output)
+                
+                if isinstance(raw_output, list):
+                    raw_output = "\n".join([str(i) for i in raw_output])
+                    
+                return str(raw_output).strip()
+            except Exception as e:
+                return f"Gagal mengekstrak JSON: {str(e)}\n\nRaw:\n{result.stdout}"
         else:
             return f"❌ Gagal mengambil data. Detail error:\n{result.stderr or result.stdout}"
 
