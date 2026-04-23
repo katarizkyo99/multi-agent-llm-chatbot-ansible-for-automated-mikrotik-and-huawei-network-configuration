@@ -7,8 +7,11 @@ import MessageInput from "@/components/MessageInput";
 import HistoryViewer from "@/components/HistoryViewer";
 
 export default function Home() {
-    const BASE_URL = "http://192.168.0.104:8000"; // Sesuaikan IP Anda
+    const BASE_URL = "http://192.168.0.104:8000"; // Sesuaikan IP 
 
+    // =========================================================================
+    // SECTION 1: STATE MANAGEMENT
+    // =========================================================================
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [search, setSearch] = useState("");
     const [editingIndex, setEditingIndex] = useState(null);
@@ -31,6 +34,7 @@ export default function Home() {
 
     const activeChat = chats.find((c) => c.id === activeChatId);
 
+    // Fungsi Pembantu Fetch API
     const safeFetchJson = async (url, options = {}) => {
         try {
             const res = await fetch(url, options);
@@ -46,12 +50,16 @@ export default function Home() {
             throw err;
         }
     };
+
+    // Data Fetching
     const fetchNetworkUsers = async () => {
         try {
             const data = await safeFetchJson(`${BASE_URL}/api/network-devices/`); 
             if (Array.isArray(data)) setNetworkUsers(data);
         } catch (e) { console.error("Gagal load daftar user:", e); }
     };
+
+    // Lifecycle untuk setiap kali sistem dimulai
     useEffect(() => {
         const fetchChats = async () => {
             try {
@@ -73,6 +81,7 @@ export default function Home() {
         fetchConfigHistory(); 
     }, []);
 
+    // Lifecycle setiap  user berpindah ruang chat
     useEffect(() => {
         if (!activeChatId) return;
         localStorage.setItem("activeChatId", activeChatId);
@@ -99,6 +108,11 @@ export default function Home() {
         setShowHistory(true);
     };
 
+    // =========================================================================
+    // MANAJEMEN CHAT 
+    // =========================================================================
+    
+    // Membuat sesi chat baru
     const handleNewChat = useCallback(async () => {
         try {
             const data = await safeFetchJson(`${BASE_URL}/api/chats/create/`, { method: "POST" });
@@ -110,6 +124,7 @@ export default function Home() {
         } catch (err) { console.error("Gagal membuat chat:", err); }
     }, [setChats, setActiveChatId, BASE_URL]);
 
+    // Mengganti nama judul chat
     const handleRename = (index) => {
         if (newName.trim() === "") return;
         const updated = [...chats];
@@ -118,6 +133,7 @@ export default function Home() {
         setEditingIndex(null);
     };
 
+    // Menghapus sesi chat
     const handleDelete = async (index) => {
         const chatIdToDelete = chats[index].id;
         try {
@@ -131,6 +147,11 @@ export default function Home() {
         } catch (err) { console.error("Gagal hapus chat:", err); }
     };
 
+    // =========================================================================
+    // NETWORK AUTOMATION (Eksekusi Ansible)
+    // =========================================================================
+    
+    // Fungsi untuk mengirim instruksi CLI ke endpoint eksekutor Ansible di Django
     const executeConfig = async (finalConfig) => {
         try {
             return await safeFetchJson(`${BASE_URL}/api/execute_config/`, {
@@ -141,6 +162,8 @@ export default function Home() {
         } catch (e) { throw e; }
     };
 
+
+    // Fungsi yang dijalankan ketika user menekan tombol "Setuju" pada Pop-up Konfigurasi
     const handleApproveConfig = async (editedConfig) => {
         if (!editedConfig) return;
         setIsExecuting(true);
@@ -149,6 +172,8 @@ export default function Home() {
 
         try {
             const execResult = await executeConfig(editedConfig);
+
+            // Memeriksa apakah user mengedit skrip LLM sebelum dieksekusi
             const isConfigChanged = pendingConfig && (pendingConfig.trim() !== editedConfig.trim());
             const editNotice = isConfigChanged ? `\n\nKonfigurasi diedit oleh pengguna:\n\n${editedConfig}\n` : "";
             
@@ -157,6 +182,12 @@ export default function Home() {
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
                     outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}${editNotice}`;
+
+                    // Menampilkan Hasil Eksekusi
+                    if (firstResult.stdout) {
+                        outputMessage += `**Hasil Eksekusi:**\n\`\`\`text\n${firstResult.stdout}\n\`\`\``;
+                    }
+                    
                 } else {
                     outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\n\n`;
                 }
@@ -164,12 +195,14 @@ export default function Home() {
                 outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail.";
             }
 
+            // Menyimpan log riwayat ke database
             await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/add/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ config: editedConfig, status: executionSuccess ? "Berhasil" : "Gagal" }),
             });
 
+            // Menyimpan balasan sistem (sukses/gagal beserta log terminal) ke riwayat chat
             await safeFetchJson(`${BASE_URL}/api/chats/messages/save/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -188,6 +221,7 @@ export default function Home() {
         }
     };
 
+    // Fungsi yang dijalankan ketika user menekan tombol "Tolak" pada Pop-up Konfigurasi
     const handleRejectConfig = async () => {
         setShowConfirmPopup(false);
         if (!pendingConfig) return;
@@ -211,6 +245,11 @@ export default function Home() {
         }
     };
 
+
+    // =========================================================================
+    // HANDLING PENGIRIMAN PESAN & LLM
+    // =========================================================================
+    
     const handleSend = async () => {
         if (!input.trim() && !selectedImage) return;
         
@@ -234,6 +273,8 @@ export default function Home() {
 
         try {
             let res;
+
+            // Mengirim request ke Backend: Mode Gambar atau Teks
             if (currentSelectedImage) {
                 const formData = new FormData();
                 formData.append("image", currentSelectedImage);
@@ -252,8 +293,10 @@ export default function Home() {
             const data = await res.json();
             if (data.error) throw new Error(data.error);
 
+            // Mendapatkan balasan bot
             const botReply = data.cli || data.reply || "⚠️ Tidak ada balasan.";
 
+            // Memperbarui chat dengan balasan asisten LLM
             setChats((prev) => prev.map((c) => 
                 c.id === String(data.chat_id || activeChatId) 
                     ? { 
@@ -263,10 +306,13 @@ export default function Home() {
                       } 
                     : c
             ));
-            // TRIGGER POPUP KONFIRMASI BERDASARKAN FORMAT OUTPUT PROSES 2 LLM
+
+            // Jika bot berhasil menambah/menghapus perangkat dari database, refresh Sidebar
             if (botReply.includes("database") || botReply.includes("Berhasil") || botReply.includes("dihapus")) {
                 fetchNetworkUsers(); 
             }
+
+            // Jika sistem mendeteksi niat eksekusi akan muncul pop-up konfirmasi
             if (botReply.includes("Target:") && botReply.includes("Konfigurasi:")) {
                 setPendingConfig(botReply);
                 setShowConfirmPopup(true);
@@ -281,6 +327,9 @@ export default function Home() {
 
     const filteredChats = chats.filter((chat) => chat.title.toLowerCase().includes(search.toLowerCase()));
 
+    // =========================================================================
+    // RENDER / UI
+    // =========================================================================
     return (
         <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden relative">
             <Sidebar
