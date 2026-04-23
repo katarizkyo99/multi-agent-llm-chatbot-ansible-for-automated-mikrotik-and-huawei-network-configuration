@@ -18,14 +18,43 @@
           "input does not match" in mikrotik_result.stdout[0] | lower or
           "no such item" in mikrotik_result.stdout[0] | lower
 
-    # HUAWEI
-    - name: Apply config to Huawei
-      ansible.netcommon.cli_command:
-        command: "{{ item }}"
-      loop: "{{ config_cli.split('\n') | map('trim') | reject('equalto', '') | list }}"
-      #when: ansible_network_os == "generic"
-      register: huawei_result
-      
-      failed_when: 
-        - '"Error:" in huawei_result.stdout | default("")'
-        - '"Unrecognized command" in huawei_result.stdout | default("")'
+    # HUAWEI CE
+    - name: Apply config to Huawei CE
+      community.network.ce_config:
+        lines: "{{ config_cli }}"
+      when: ansible_network_os == 'ce'
+      register: ce_result
+
+      failed_when:
+        - ce_result.failed == true or
+          "unrecognized command" in (ce_result | string | lower) or
+          "wrong parameter" in (ce_result | string | lower) or
+          "error:" in (ce_result | string | lower) or
+          "incomplete command" in (ce_result | string | lower) or
+          "ambiguous command" in (ce_result | string | lower)
+
+    # 3. HUAWEI VRP 
+    - name: Apply config to Huawei VRP
+      community.network.vrp_config:
+        lines: "{{ config_cli }}"
+      when: ansible_network_os == 'vrp'
+      register: vrp_result
+
+      failed_when:
+        - vrp_result.failed == true or
+          "unrecognized command" in (vrp_result | string | lower) or
+          "wrong parameter" in (vrp_result | string | lower) or
+          "error:" in (vrp_result | string | lower) or
+          "incomplete command" in (vrp_result | string | lower) or
+          "ambiguous command" in (vrp_result | string | lower)
+
+    # Menampilkan Hasil Eksekusi Perangkat
+    - name: "Tampilkan Hasil Eksekusi Perangkat"
+      debug:
+        msg: 
+          - "=== OUTPUT MIKROTIK ==="
+          - "{{ mikrotik_result.stdout_lines | default('N/A') }}"
+          - "=== OUTPUT HUAWEI CE ==="
+          - "{{ ce_result.commands | default('N/A') }}"
+          - "=== OUTPUT HUAWEI VRP ==="
+          - "{{ vrp_result.commands | default('N/A') }}"
