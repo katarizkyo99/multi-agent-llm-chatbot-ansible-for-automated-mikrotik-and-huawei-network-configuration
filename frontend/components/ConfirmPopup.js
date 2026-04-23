@@ -6,12 +6,10 @@ export default function ConfirmPopup({
     pendingConfig, 
     handleApproveConfig, 
     handleRejectConfig, 
-    isExecuting // Props baru dari parent
+    isExecuting 
 }) {
-    // State lokal untuk edit config
     const [editedConfig, setEditedConfig] = useState(pendingConfig);
 
-    // Update state jika pendingConfig berubah dari luar
     useEffect(() => {
         setEditedConfig(pendingConfig);
     }, [pendingConfig]);
