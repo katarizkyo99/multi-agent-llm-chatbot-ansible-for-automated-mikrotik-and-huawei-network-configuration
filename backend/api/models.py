@@ -16,7 +16,7 @@ class Chat(models.Model):
 class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
-    role = models.CharField(max_length=10)  # 'user' atau 'assistant'
+    role = models.CharField(max_length=10) 
     content = models.TextField()
     image = models.ImageField(upload_to="chat_images/", null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -27,9 +27,6 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.role}: {self.content[:30] if self.content else '[image]'}"
 
-
-from django.db import models
-
 class RiwayatKonfigurasi(models.Model):
     STATUS_CHOICES = (
         ("Disetujui", "Disetujui"),
@@ -38,7 +35,7 @@ class RiwayatKonfigurasi(models.Model):
 
     config = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-    image = models.ImageField(upload_to="riwayat_images/", null=True, blank=True)  # <-- tambah ini
+    image = models.ImageField(upload_to="riwayat_images/", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -55,22 +52,14 @@ class NetworkDevice(models.Model):
     port = models.IntegerField(default=22)
     username = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
-    vendor = models.CharField(max_length=50)  # mikrotik, huawei, cisco, dll
+    vendor = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
 
-
-
-
-
-# backend/api/models.py
-
 class DeviceAlias(models.Model):
-    # Nama yang dihasilkan oleh LLM (e.g., "Router Pusat")
     alias_name = models.CharField(max_length=100, unique=True) 
     
-    # ForeignKey ke NetworkDevice yang sebenarnya
     device = models.ForeignKey(
         NetworkDevice,
         on_delete=models.CASCADE,
