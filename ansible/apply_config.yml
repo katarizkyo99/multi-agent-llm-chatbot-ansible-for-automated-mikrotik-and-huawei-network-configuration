@@ -12,11 +12,11 @@
       
       failed_when: 
         - mikrotik_result.failed == true or
-          "bad command" in mikrotik_result.stdout[0] | lower or
-          "syntax error" in mikrotik_result.stdout[0] | lower or
-          "expected end" in mikrotik_result.stdout[0] | lower or
-          "input does not match" in mikrotik_result.stdout[0] | lower or
-          "no such item" in mikrotik_result.stdout[0] | lower
+          "bad command" in (mikrotik_result | string | lower) or
+          "syntax error" in (mikrotik_result | string | lower) or
+          "expected end" in (mikrotik_result | string | lower) or
+          "input does not match" in (mikrotik_result | string | lower) or
+          "no such item" in (mikrotik_result | string | lower)
 
     # HUAWEI CE
     - name: Apply config to Huawei CE
