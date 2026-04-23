@@ -37,7 +37,7 @@
     - name: Apply config to Huawei VRP
       ansible.netcommon.cli_command:
         lines: "{{ config_cli }}"
-      when: ansible_network_os == 'vrp'
+      when: ansible_network_os == 'community.network.vrp'
       register: vrp_result
 
       failed_when:
