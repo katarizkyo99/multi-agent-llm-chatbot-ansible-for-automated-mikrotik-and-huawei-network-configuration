@@ -662,7 +662,6 @@ def execute_config(request):
 
 
 # Membaca Informasi Perangkat
-@api_view(["POST"])
 def execute_read_device(target_name_input, command):
     try:
         final_target_name = None
