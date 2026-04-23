@@ -19,7 +19,7 @@
 
     # HUAWEI VRP
     - name: Run command on Huawei VRP
-      community.network.vrp_command:
+      ansible.netcommon.cli_command:
         commands: "{{ target_command }}"
       when: ansible_network_os == 'vrp'
       register: vrp_out
