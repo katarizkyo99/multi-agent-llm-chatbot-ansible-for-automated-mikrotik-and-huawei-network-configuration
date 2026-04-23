@@ -750,23 +750,23 @@ def execute_read_device(target_name_input, command):
         if os.path.exists(inventory_file): os.remove(inventory_file)
         if os.path.exists(vars_file_path): os.remove(vars_file_path)
 
-        if result.returncode == 0:
+        if result.returncode == 0 or result.returncode == 2:
             try:
-                parsed_json = json.loads(result.stdout)
-                raw_output = "Tidak ada output"
+                match = re.search(r'"msg":\s*"(.*?)"\s*}', result.stdout, re.DOTALL)
                 
-                for play in parsed_json.get("plays", []):
-                    for task in play.get("tasks", []):
-                        if task.get("task", {}).get("name") == "Output Eksekusi":
-                            host_res = task.get("hosts", {}).get(final_target_name, {})
-                            raw_output = host_res.get("msg", raw_output)
-                
-                if isinstance(raw_output, list):
-                    raw_output = "\n".join([str(i) for i in raw_output])
+                if match:
+                    raw_output = match.group(1)
                     
-                return str(raw_output).strip()
+                    clean_output = raw_output.encode('utf-8').decode('unicode_escape')
+                    
+                    clean_output = clean_output.strip()
+                    
+                    return clean_output
+                else:
+                    return f"❌ Berhasil dieksekusi, tapi gagal menemukan blok 'msg' di output.\n\nRaw Output:\n{result.stdout}"
             except Exception as e:
-                return f"Gagal mengekstrak JSON: {str(e)}\n\nRaw:\n{result.stdout}"
+                return f"❌ Gagal mengekstrak teks: {str(e)}\n\nRaw:\n{result.stdout}"
+        
         else:
             return f"❌ Gagal mengambil data. Detail error:\n{result.stderr or result.stdout}"
 
