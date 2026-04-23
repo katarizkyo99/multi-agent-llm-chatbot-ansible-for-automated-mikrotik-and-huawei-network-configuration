@@ -237,7 +237,25 @@ class ChatView(APIView):
           # Membaca status/konfigurasi perangkat jaringan
           elif "[READ_DEVICE]" in proses_1_reply:
               print("▶️ Intent: Membaca status perangkat...")
-              final_bot_reply = "Saya sedang mengambil data langsung dari perangkat...\n\n" + proses_1_reply.replace("[READ_DEVICE]", "")
+              try:
+                  # Parsing
+                  raw_intent = proses_1_reply.replace("[READ_DEVICE]", "").strip()
+                  parts = raw_intent.split(",", 1)
+                  
+                  if len(parts) == 2:
+                      target_device = parts[0].strip()
+                      target_command = parts[1].strip()
+                      
+                      # Memanggil fungsi eksekutor Ansible Read
+                      ansible_output = execute_read_device(target_device, target_command)
+                      
+                      final_bot_reply = f"✅ Mengambil data dari **{target_device}** (Perintah: `{target_command}`):\n\n"
+                      final_bot_reply += f"```text\n{ansible_output}\n```"
+                  else:
+                      final_bot_reply = "⚠️ Maaf, asisten gagal memformat perintah baca perangkat."
+                      
+              except Exception as e:
+                  final_bot_reply = f"❌ Gagal memproses perintah baca: {str(e)}"
   
           # Menambahkan perangkat baru ke DB
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
