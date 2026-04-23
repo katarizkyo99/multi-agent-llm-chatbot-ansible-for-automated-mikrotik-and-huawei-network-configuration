@@ -695,6 +695,7 @@ def execute_config(request):
 # Membaca Informasi Perangkat
 def execute_read_device(target_name_input, command):
     try:
+        # 1. LOGIKA PENCARIAN TARGET PERANGKAT
         final_target_name = None
         try:
             alias_entry = DeviceAlias.objects.get(alias_name__iexact=target_name_input)
@@ -724,13 +725,23 @@ def execute_read_device(target_name_input, command):
         safe_user = device.username.replace("\\", "\\\\") if device.username else "root"
         safe_pass = device.password.replace("\\", "\\\\") if device.password else ""
         safe_host = device.host.replace("\\", "\\\\")
-        ansible_os = device.vendor.lower()
-
-        if ansible_os in ['vrp', 'ce']:
-            connection_type = "local"
-        else:
-            connection_type = "network_cli"
         
+        # ==============================================================
+        # 2. MAPPING FQCN (Nama Lengkap OS untuk Ansible)
+        # ==============================================================
+        vendor_db = device.vendor.lower()
+        if vendor_db == 'ce':
+            ansible_os = 'community.network.ce'
+        elif vendor_db == 'vrp':
+            ansible_os = 'community.network.vrp'
+        elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
+            ansible_os = 'community.routeros.routeros'
+        else:
+            ansible_os = vendor_db
+
+        # Saklar khusus untuk S5300 (VRP5) agar tidak nyangkut di "---- More ----"
+        terminal_type = "dumb" if ansible_os == 'community.network.vrp' else "vt100"
+
         with open(inventory_file, "w") as f:
             f.write("[routers]\n")
             f.write(f"{final_target_name.replace(' ', '_')} "
@@ -739,12 +750,15 @@ def execute_read_device(target_name_input, command):
                     f"ansible_port={device.port} "
                     f"ansible_password='{safe_pass}' "
                     f"ansible_become=no "
-                    f"ansible_network_os={ansible_os} "
-                    f"ansible_connection={connection_type} "
-                    f"ansible_command_timeout=30 "
-                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'\n")
+                    f"ansible_network_os={ansible_os} "           # <--- Wajib nama lengkap
+                    f"ansible_connection=network_cli "            # <--- Kembali ke network_cli
+                    f"ansible_terminal_type={terminal_type} "     # <--- Penyelamat S5300
+                    f"ansible_command_timeout=60 "                # <--- Timeout dilonggarkan
+                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc'\n")
 
+        # ==============================================================
         # 3. JALANKAN ANSIBLE READ
+        # ==============================================================
         playbook_path = "/home/kyo/ta/ansible/read_device.yml"
         playbook_cmd = [
             "ansible-playbook", playbook_path,
@@ -752,8 +766,6 @@ def execute_read_device(target_name_input, command):
             "-e", f"@{vars_file_path}"
         ]
 
-        custom_env = {**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False", "ANSIBLE_STDOUT_CALLBACK": "json"}
-        
         result = subprocess.run(
             playbook_cmd,
             env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False"},
@@ -765,17 +777,17 @@ def execute_read_device(target_name_input, command):
         if os.path.exists(inventory_file): os.remove(inventory_file)
         if os.path.exists(vars_file_path): os.remove(vars_file_path)
 
+        # ==============================================================
+        # 4. PARSING HASIL DENGAN REGEX
+        # ==============================================================
         if result.returncode == 0 or result.returncode == 2:
             try:
                 match = re.search(r'"msg":\s*"(.*?)"\s*}', result.stdout, re.DOTALL)
                 
                 if match:
                     raw_output = match.group(1)
-                    
                     clean_output = raw_output.encode('utf-8').decode('unicode_escape')
-                    
                     clean_output = clean_output.strip()
-                    
                     return clean_output
                 else:
                     return f"❌ Berhasil dieksekusi, tapi gagal menemukan blok 'msg' di output.\n\nRaw Output:\n{result.stdout}"
