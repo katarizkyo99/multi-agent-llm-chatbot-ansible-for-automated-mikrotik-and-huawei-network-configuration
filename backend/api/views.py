@@ -768,7 +768,8 @@ def execute_read_device(target_name_input, command):
 
         result = subprocess.run(
             playbook_cmd,
-            env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False"},
+            env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False",
+                "ANSIBLE_DEPRECATION_WARNINGS": "False"},
             capture_output=True,
             text=True
         )
