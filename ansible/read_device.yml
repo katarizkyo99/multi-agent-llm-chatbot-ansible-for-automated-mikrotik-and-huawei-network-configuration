@@ -29,9 +29,9 @@
       debug:
         msg: >
           {% if ansible_network_os == 'routeros' %}
-          {{ mikrotik_out.stdout_lines | default('Tidak ada output') }}
+          {{ mikrotik_out.stdout[0] | default('Tidak ada output') }}
           {% elif ansible_network_os == 'ce' %}
-          {{ ce_out.stdout | default('Tidak ada output') }}
+          {{ ce_out.stdout[0] | default(ce_out.stdout | default('Tidak ada output')) }}
           {% elif ansible_network_os == 'vrp' %}
           {{ vrp_out.stdout | default('Tidak ada output') }}
           {% endif %}
