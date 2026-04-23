@@ -259,7 +259,15 @@ class ChatView(APIView):
                       else:
                           print("▶️ Memformat output raw menjadi tabel Markdown...")
                           format_messages = [
-                              {"role": "system", "content": "Kamu adalah asisten jaringan. Ubah raw text output dari router berikut menjadi tabel Markdown yang rapi. Hapus baris informasi yang tidak relevan (seperti 'Flags: ...'). HANYA berikan output berupa tabel Markdown, tanpa teks pembuka/penutup apapun."},
+                              {"role": "system", "content": (
+                                  "Kamu adalah asisten jaringan. Ubah raw text output dari router berikut menjadi tabel Markdown yang valid. "
+                                  "PENTING: Kamu WAJIB menggunakan simbol pipa (|) sebagai pemisah kolom dan garis putus-putus (|---|) di bawah header tabel. "
+                                  "Contoh format yang WAJIB kamu ikuti:\n"
+                                  "| # | ADDRESS | NETWORK | INTERFACE |\n"
+                                  "|---|---|---|---|\n"
+                                  "| 0 | 192.168.1.1/24 | 192.168.1.0 | ether1 |\n\n"
+                                  "Hapus informasi yang tidak relevan (seperti 'Flags: ...'). HANYA berikan output berupa tabel Markdown saja, tanpa teks pengantar."
+                              )},
                               {"role": "user", "content": ansible_output}
                           ]
                           
