@@ -726,6 +726,11 @@ def execute_read_device(target_name_input, command):
         safe_host = device.host.replace("\\", "\\\\")
         ansible_os = device.vendor.lower()
 
+        if ansible_os in ['vrp', 'ce']:
+            connection_type = "local"
+        else:
+            connection_type = "network_cli"
+        
         with open(inventory_file, "w") as f:
             f.write("[routers]\n")
             f.write(f"{final_target_name.replace(' ', '_')} "
@@ -735,7 +740,7 @@ def execute_read_device(target_name_input, command):
                     f"ansible_password='{safe_pass}' "
                     f"ansible_become=no "
                     f"ansible_network_os={ansible_os} "
-                    f"ansible_connection=network_cli "
+                    f"ansible_connection={connection_type} "
                     f"ansible_command_timeout=30 "
                     f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'\n")
 
