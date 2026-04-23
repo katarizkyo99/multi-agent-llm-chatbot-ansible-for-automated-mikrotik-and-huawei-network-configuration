@@ -97,7 +97,10 @@ RULES:
    [DELETE_DEVICE_FROM_DB] {"name":"..."}
 6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet.
 7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
-8. Read Device Status: Output exactly: `[READ_DEVICE] name, command`.
+8. Read Device Status: Output exactly: `[READ_DEVICE] name, native_command`.
+   - IMPORTANT: 'native_command' must match the vendor OS!
+   - For Mikrotik: use '/ip address print', '/ping X.X.X.X count=4', etc.
+   - For Huawei (CE/VRP): use 'display ip interface brief', 'ping X.X.X.X', etc.
 """
 
 PROSES_2_PROMPT = """
