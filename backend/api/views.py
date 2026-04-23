@@ -638,7 +638,85 @@ def execute_config(request):
         import traceback
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
-#
+
+
+# Membaca Informasi Perangkat
+@api_view(["POST"])
+def execute_read_device(target_name_input, command):
+    try:
+        final_target_name = None
+        try:
+            alias_entry = DeviceAlias.objects.get(alias_name__iexact=target_name_input)
+            final_target_name = alias_entry.device.name
+        except DeviceAlias.DoesNotExist:
+            try:
+                device_obj = NetworkDevice.objects.get(name__iexact=target_name_input)
+                final_target_name = device_obj.name
+            except NetworkDevice.DoesNotExist:
+                clean_target = target_name_input.lower().replace(" ", "").replace("_", "").replace("-", "")
+                all_devices = NetworkDevice.objects.all()
+                for d in all_devices:
+                    if d.name.lower().replace(" ", "").replace("_", "").replace("-", "") == clean_target:
+                        final_target_name = d.name
+                        break
+        
+        if not final_target_name:
+            return f"❌ Gagal: Perangkat '{target_name_input}' tidak ditemukan di database."
+
+        device = NetworkDevice.objects.get(name=final_target_name)
+        vars_file_path = f"/tmp/vars_read_{final_target_name.replace(' ', '_')}.json"
+        
+        with open(vars_file_path, "w") as vars_f:
+            json.dump({"target_command": command}, vars_f)
+
+        inventory_file = f"/tmp/inventory_read_{final_target_name.replace(' ', '_')}.ini"
+        safe_user = device.username.replace("\\", "\\\\") if device.username else "root"
+        safe_pass = device.password.replace("\\", "\\\\") if device.password else ""
+        safe_host = device.host.replace("\\", "\\\\")
+        ansible_os = device.vendor.lower()
+
+        with open(inventory_file, "w") as f:
+            f.write("[routers]\n")
+            f.write(f"{final_target_name.replace(' ', '_')} "
+                    f"ansible_host={safe_host} "
+                    f"ansible_user={safe_user} "
+                    f"ansible_port={device.port} "
+                    f"ansible_password='{safe_pass}' "
+                    f"ansible_become=no "
+                    f"ansible_network_os={ansible_os} "
+                    f"ansible_connection=network_cli "
+                    f"ansible_command_timeout=30 "
+                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'\n")
+
+        # 3. JALANKAN ANSIBLE READ
+        playbook_path = "/home/kyo/ta/ansible/read_device.yml" # Sesuaikan path file
+        playbook_cmd = [
+            "ansible-playbook", playbook_path,
+            "-i", inventory_file,
+            "-e", f"@{vars_file_path}"
+        ]
+
+        result = subprocess.run(
+            playbook_cmd,
+            env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False"},
+            capture_output=True,
+            text=True
+        )
+
+        # Hapus file sementara
+        if os.path.exists(inventory_file): os.remove(inventory_file)
+        if os.path.exists(vars_file_path): os.remove(vars_file_path)
+
+        # 4. KEMBALIKAN HASIL OUTPUT
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            return f"❌ Gagal mengambil data. Detail error:\n{result.stderr or result.stdout}"
+
+    except Exception as e:
+        return f"❌ Kesalahan sistem: {str(e)}"
+
+
 @api_view(["GET"])
 def get_network_devices(request):
     try:
