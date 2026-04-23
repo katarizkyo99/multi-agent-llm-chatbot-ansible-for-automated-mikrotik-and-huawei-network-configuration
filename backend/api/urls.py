@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     ChatView, get_chats, get_chat_messages, create_chat, delete_chat,
     get_riwayat_konfigurasi, add_riwayat_konfigurasi, save_message, 
-    execute_config, ping_device, get_network_devices, delete_riwayat_konfigurasi, 
+    execute_config, get_network_devices, delete_riwayat_konfigurasi, 
     delete_all_riwayat
 )
 urlpatterns = [
@@ -17,7 +17,6 @@ urlpatterns = [
     path("riwayat-konfigurasi/delete-all/", delete_all_riwayat),
     path("chats/messages/save/", save_message, name="save_message"),
     path('execute_config/', execute_config),
-    path("ping/", ping_device, name="ping_device"),
     path('network-devices/', get_network_devices, name='get_network_devices'),
 ]
 
