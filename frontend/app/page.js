@@ -181,7 +181,7 @@ export default function Home() {
                 const firstResult = execResult.results[0];
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
-                    outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}${editNotice}`;
+                    outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}`;
 
                     // Menampilkan Hasil Eksekusi
                     if (firstResult.stdout) {
@@ -189,7 +189,7 @@ export default function Home() {
                     }
                     
                 } else {
-                    outputMessage = `❌ Konfigurasi gagal diterapkan pada ${firstResult.target}\n\n`;
+                    outputMessage = `❌ Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}\n\n`;
                 }
             } else {
                 outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail.";
