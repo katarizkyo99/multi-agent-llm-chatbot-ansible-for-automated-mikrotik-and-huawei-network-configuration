@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import ConfirmPopup from "@/components/ConfirmPopup";
-import Markdown from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 // Mermaid Graph
@@ -74,22 +74,41 @@ const MessageBubble = ({ message, BASE_URL }) => {
             >
                 {message.text && (
                     <div className="prose prose-sm max-w-none text-current break-words overflow-hidden w-full">
-                        <Markdown
+                        <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                                code({ node, inline, className, children, ...props }) {
+                                pre({ node, children, ...props }) {
+                                    const hasMermaid = node.children?.[0]?.properties?.className?.includes("language-mermaid");
+                                    
+                                    if (hasMermaid) {
+                                        return <div className="my-4">{children}</div>;
+                                    }
+                                    
+                                    return (
+                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2" {...props}>
+                                            {children}
+                                        </pre>
+                                    );
+                                },
+
+                                code({ node, className, children, ...props }) {
                                     const match = /language-(\w+)/.exec(className || "");
-                                    if (!inline && match && match[1] === "mermaid") {
+
+                                    if (match && match[1] === "mermaid") {
                                         return <MermaidGraph chart={String(children).replace(/\n$/, "")} />;
                                     }
-                                    return !inline ? (
-                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2">
-                                            <code className={className} {...props}>
+
+                                    const isInline = !match; 
+                                    if (isInline) {
+                                        return (
+                                            <code className="bg-gray-300 text-red-600 px-1 rounded font-mono text-xs" {...props}>
                                                 {children}
                                             </code>
-                                        </pre>
-                                    ) : (
-                                        <code className="bg-gray-300 text-red-600 px-1 rounded font-mono text-xs" {...props}>
+                                        );
+                                    }
+
+                                    return (
+                                        <code className={className} {...props}>
                                             {children}
                                         </code>
                                     );
@@ -97,7 +116,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                             }}
                         >
                             {message.text}
-                        </Markdown>
+                        </ReactMarkdown>
                     </div>
                 )}
                 
