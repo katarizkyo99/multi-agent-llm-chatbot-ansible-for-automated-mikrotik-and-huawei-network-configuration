@@ -740,7 +740,7 @@ def execute_read_device(target_name_input, command):
             ansible_os = vendor_db
 
         # Saklar khusus untuk S5300 (VRP5) agar tidak nyangkut di "---- More ----"
-        terminal_type = "dumb" if ansible_os == 'community.network.vrp' else "vt100"
+        terminal_type = "vt100"
 
         with open(inventory_file, "w") as f:
             f.write("[routers]\n")
@@ -754,8 +754,7 @@ def execute_read_device(target_name_input, command):
                     f"ansible_connection=network_cli "        
                     f"ansible_terminal_type={terminal_type} "   
                     f"ansible_command_timeout=60 "             
-                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc'\n")
-
+                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
         # ==============================================================
         # 3. JALANKAN ANSIBLE READ
         # ==============================================================
