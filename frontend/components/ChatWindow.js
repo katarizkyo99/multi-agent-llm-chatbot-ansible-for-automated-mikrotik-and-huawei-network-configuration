@@ -74,7 +74,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
             >
                 {message.text && (
                     <div className="prose prose-sm max-w-none text-current break-words overflow-hidden w-full">
-                        <ReactMarkdown
+                        <Markdown
                             remarkPlugins={[remarkGfm]}
                             components={{
                                 code({ node, inline, className, children, ...props }) {
@@ -97,7 +97,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                             }}
                         >
                             {message.text}
-                        </ReactMarkdown>
+                        </Markdown>
                     </div>
                 )}
                 
