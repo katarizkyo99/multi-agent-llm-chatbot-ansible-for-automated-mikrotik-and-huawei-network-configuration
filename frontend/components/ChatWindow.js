@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import ConfirmPopup from "@/components/ConfirmPopup";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 // Mermaid Graph
