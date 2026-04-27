@@ -750,10 +750,10 @@ def execute_read_device(target_name_input, command):
                     f"ansible_port={device.port} "
                     f"ansible_password='{safe_pass}' "
                     f"ansible_become=no "
-                    f"ansible_network_os={ansible_os} "           # <--- Wajib nama lengkap
-                    f"ansible_connection=network_cli "            # <--- Kembali ke network_cli
-                    f"ansible_terminal_type={terminal_type} "     # <--- Penyelamat S5300
-                    f"ansible_command_timeout=60 "                # <--- Timeout dilonggarkan
+                    f"ansible_network_os={ansible_os} "        
+                    f"ansible_connection=network_cli "        
+                    f"ansible_terminal_type={terminal_type} "   
+                    f"ansible_command_timeout=60 "             
                     f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc'\n")
 
         # ==============================================================
