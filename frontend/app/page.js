@@ -182,11 +182,6 @@ export default function Home() {
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
                     outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}`;
-
-                    // Menampilkan Hasil Eksekusi
-                    if (firstResult.stdout) {
-                        outputMessage += `**Hasil Eksekusi:**\n\`\`\`text\n${firstResult.stdout}\n\`\`\``;
-                    }
                     
                 } else {
                     outputMessage = `❌ Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}\n\n`;
