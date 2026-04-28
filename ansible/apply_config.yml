@@ -21,6 +21,7 @@
       ansible.netcommon.cli_config:
         config: "{{ config_cli }}"
       when: ansible_network_os == 'community.network.ce'
+      become: yes
       register: huawei_result
       
       failed_when:
