@@ -10,8 +10,8 @@
       register: mikrotik_out
 
     - name: Run command on Huawei VRP
-      community.network.vrp_command:
-        commands: "{{ target_command }}"
+      ansible.netcommon.cli_command:
+        command: "{{ target_command }}"
       when: ansible_network_os == 'community.network.vrp'
       register: vrp_out
 
@@ -27,7 +27,7 @@
           {% if ansible_network_os == 'community.routeros.routeros' %}
           {{ mikrotik_out.stdout[0] | default('Tidak ada output') }}
           {% elif ansible_network_os == 'community.network.vrp' %}
-          {{ vrp_out.stdout[0] | default('Tidak ada output') }}
+          {{ vrp_out.stdout | default('Tidak ada output') }}
           {% elif ansible_network_os == 'community.network.ce' %}
           {{ ce_out.stdout[0] | default('Tidak ada output') }}
           {% endif %}
