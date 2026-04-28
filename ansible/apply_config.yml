@@ -17,11 +17,11 @@
           "input does not match" in (mikrotik_result | string | lower) or
           "no such item" in (mikrotik_result | string | lower)
 
-    - name: Run command on Huawei
-      ansible.netcommon.cli_command:
-        command: "{{ target_command }}"
+    - name: Apply config to Huawei
+      ansible.netcommon.cli_config:
+        config: "{{ config_cli }}"
       when: ansible_network_os == 'community.network.ce'
-      register: huawei_out
+      register: huawei_result
       
       failed_when:
         - huawei_result.failed == true or
@@ -30,4 +30,3 @@
           "error:" in (huawei_result | string | lower) or
           "incomplete command" in (huawei_result | string | lower) or
           "ambiguous command" in (huawei_result | string | lower)
-          - "{{ huawei_result.commands | default('N/A') }}"
