@@ -239,7 +239,8 @@ class ChatView(APIView):
                   messages=messages_for_proses_2
               )
           
-          # Membaca status/konfigurasi perangkat jaringan
+
+         # Membaca status/konfigurasi perangkat jaringan
           elif "[READ_DEVICE]" in proses_1_reply:
               print("▶️ Intent: Membaca status perangkat...")
               try:
@@ -257,8 +258,8 @@ class ChatView(APIView):
                       if "❌" in ansible_output or "Gagal" in ansible_output:
                           final_bot_reply = ansible_output
                       else:
-                        print("▶️ Memformat output raw menjadi rapi...")
-                        format_messages = [
+                          print("▶️ Memformat output raw menjadi rapi...")
+                          format_messages = [
                               {"role": "system", "content": (
                                   "Format raw network CLI output. RULES:\n"
                                   "1. Multi-column/list -> valid Markdown table (infer native headers).\n"
@@ -288,6 +289,7 @@ class ChatView(APIView):
                       
               except Exception as e:
                   final_bot_reply = f"❌ Gagal memproses perintah baca: {str(e)}"
+          
   
           # Menambahkan perangkat baru ke DB
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
