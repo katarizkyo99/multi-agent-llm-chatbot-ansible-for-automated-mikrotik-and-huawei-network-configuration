@@ -653,20 +653,6 @@ def execute_config(request):
                             f"ansible_command_timeout=60 "
                             f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
 
-                # Menulis file Inventory Ansible secara dinamis
-                with open(inventory_file, "w") as f:
-                    f.write("[routers]\n")
-                    f.write(f"{final_target_name.replace(' ', '_')} "
-                            f"ansible_host={safe_host} "
-                            f"ansible_user={safe_user} "
-                            f"ansible_port={device.port} "
-                            f"ansible_password='{safe_pass}' "
-                            f"ansible_become=no "
-                            f"ansible_network_os={ansible_os} "
-                            f"ansible_connection=network_cli "
-                            f"ansible_command_timeout=60 "
-                            f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc'\n")
-                
                 # Menjalankan Subprocess Playbook Ansible
                 playbook_path = "/home/kyo/ta/ansible/apply_config.yml"   
                 playbook_cmd = [
