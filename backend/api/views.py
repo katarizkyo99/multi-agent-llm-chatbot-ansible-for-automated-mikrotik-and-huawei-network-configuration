@@ -599,9 +599,11 @@ def execute_config(request):
                         line.strip() for line in raw_lines 
                         if line.strip().lower() not in ['system-view', 'quit', 'return', 'sys', 'q']
                         and line.strip() != ""
+                        and not line.strip().lower().startswith("ip address:")
+                        and not ":" in line.strip()
                     ]
                     final_config_payload = "\n".join(cleaned_list)
-                    print(f" Config Huawei: {final_config_payload}")
+                    print(f" Config Huawei Bersih: {final_config_payload}")
    
                 else:
                    final_config_payload = [line.strip() for line in raw_lines if line.strip() != ""]
