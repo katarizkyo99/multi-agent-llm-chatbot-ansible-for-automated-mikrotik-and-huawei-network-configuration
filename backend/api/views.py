@@ -620,8 +620,38 @@ def execute_config(request):
                 safe_user = device.username.replace("\\", "\\\\") if device.username else "root"
                 safe_pass = device.password.replace("\\", "\\\\") if device.password else ""
                 safe_host = device.host.replace("\\", "\\\\")
+
+
+                safe_host = device.host.replace("\\", "\\\\")
                 
-                ansible_os = device.vendor.lower()
+                # ==============================================================
+                # MAPPING FQCN
+                # ==============================================================
+                vendor_db = device.vendor.lower()
+                
+                if vendor_db == 'ce' or vendor_db == 'vrp':
+                    ansible_os = 'community.network.ce'
+                    terminal_type = "vt100"
+                elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
+                    ansible_os = 'community.routeros.routeros'
+                    terminal_type = "dumb"
+                else:
+                    ansible_os = vendor_db
+                    terminal_type = "dumb"
+
+                with open(inventory_file, "w") as f:
+                    f.write("[routers]\n")
+                    f.write(f"{final_target_name.replace(' ', '_')} "
+                            f"ansible_host={safe_host} "
+                            f"ansible_user={safe_user} "
+                            f"ansible_port={device.port} "
+                            f"ansible_password='{safe_pass}' "
+                            f"ansible_become=no "
+                            f"ansible_network_os={ansible_os} "
+                            f"ansible_connection=network_cli "
+                            f"ansible_terminal_type={terminal_type} "
+                            f"ansible_command_timeout=60 "
+                            f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
 
                 # Menulis file Inventory Ansible secara dinamis
                 with open(inventory_file, "w") as f:
