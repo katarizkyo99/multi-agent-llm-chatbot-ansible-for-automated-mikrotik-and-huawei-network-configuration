@@ -258,7 +258,7 @@ class ChatView(APIView):
                           final_bot_reply = ansible_output
                       else:
                         print("▶️ Memformat output raw menjadi rapi...")
-                          format_messages = [
+                        format_messages = [
                               {"role": "system", "content": (
                                   "Format raw network CLI output. RULES:\n"
                                   "1. Multi-column/list -> valid Markdown table (infer native headers).\n"
