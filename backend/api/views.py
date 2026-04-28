@@ -634,7 +634,7 @@ def execute_config(request):
                 if vendor_db == 'ce' or vendor_db == 'vrp':
                     ansible_os = 'community.network.ce'
                     terminal_type = "vt100"
-                    become_status = "yes"  
+                    become_status = "no"  
                     become_method = "ansible_become_method=enable ansible_become_password='{safe_pass}'"
                 elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
                     ansible_os = 'community.routeros.routeros'
