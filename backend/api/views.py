@@ -257,16 +257,14 @@ class ChatView(APIView):
                       if "❌" in ansible_output or "Gagal" in ansible_output:
                           final_bot_reply = ansible_output
                       else:
-                          print("▶️ Memformat output raw menjadi tabel Markdown...")
+                        print("▶️ Memformat output raw menjadi rapi...")
                           format_messages = [
                               {"role": "system", "content": (
-                                  "Kamu adalah asisten jaringan. Ubah raw text output dari router berikut menjadi tabel Markdown yang valid. "
-                                  "PENTING: Kamu WAJIB menggunakan simbol pipa (|) sebagai pemisah kolom dan garis putus-putus (|---|) di bawah header tabel. "
-                                  "Contoh format yang WAJIB kamu ikuti:\n"
-                                  "| # | ADDRESS | NETWORK | INTERFACE |\n"
-                                  "|---|---|---|---|\n"
-                                  "| 0 | 192.168.1.1/24 | 192.168.1.0 | ether1 |\n\n"
-                                  "Hapus informasi yang tidak relevan (seperti 'Flags: ...'). HANYA berikan output berupa tabel Markdown saja, tanpa teks pengantar."
+                                  "Format raw network CLI output. RULES:\n"
+                                  "1. Multi-column/list -> valid Markdown table (infer native headers).\n"
+                                  "2. Short/single-line/key-value -> `text` code block (NO tables).\n"
+                                  "3. Strip legends/flags (e.g., 'Flags: X...').\n"
+                                  "4. Output ONLY the final table or code block. Zero conversational filler."
                               )},
                               {"role": "user", "content": ansible_output}
                           ]
