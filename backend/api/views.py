@@ -623,15 +623,19 @@ def execute_config(request):
 
 
                 safe_host = device.host.replace("\\", "\\\\")
-                
                 # ==============================================================
                 # MAPPING FQCN
                 # ==============================================================
                 vendor_db = device.vendor.lower()
                 
+                become_status = "no"
+                become_method = ""
+                
                 if vendor_db == 'ce' or vendor_db == 'vrp':
                     ansible_os = 'community.network.ce'
                     terminal_type = "vt100"
+                    become_status = "yes"  
+                    become_method = "ansible_become_method=enable ansible_become_password='{safe_pass}'"
                 elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
                     ansible_os = 'community.routeros.routeros'
                     terminal_type = "dumb"
@@ -646,13 +650,14 @@ def execute_config(request):
                             f"ansible_user={safe_user} "
                             f"ansible_port={device.port} "
                             f"ansible_password='{safe_pass}' "
-                            f"ansible_become=no "
+                            f"ansible_become={become_status} "
+                            f"{become_method} "
                             f"ansible_network_os={ansible_os} "
                             f"ansible_connection=network_cli "
                             f"ansible_terminal_type={terminal_type} "
                             f"ansible_command_timeout=60 "
                             f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
-
+               
                 # Menjalankan Subprocess Playbook Ansible
                 playbook_path = "/home/kyo/ta/ansible/apply_config.yml"   
                 playbook_cmd = [
