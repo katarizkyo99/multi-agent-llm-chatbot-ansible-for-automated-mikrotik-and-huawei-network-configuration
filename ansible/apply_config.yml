@@ -18,8 +18,8 @@
           "no such item" in (mikrotik_result | string | lower)
 
     - name: Apply config to Huawei
-      community.network.ce_config:
-        lines: "{{ config_cli }}"
+      ansible.netcommon.cli_config:
+        config: "{{ config_cli }}"
       when: ansible_network_os == 'community.network.ce'
       register: huawei_result
 
@@ -30,11 +30,4 @@
           "error:" in (huawei_result | string | lower) or
           "incomplete command" in (huawei_result | string | lower) or
           "ambiguous command" in (huawei_result | string | lower)
-
-    - name: "Tampilkan Hasil Eksekusi Perangkat"
-      debug:
-        msg: 
-          - "=== OUTPUT MIKROTIK ==="
-          - "{{ mikrotik_result.stdout_lines | default('N/A') }}"
-          - "=== OUTPUT HUAWEI ==="
           - "{{ huawei_result.commands | default('N/A') }}"
