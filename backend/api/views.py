@@ -730,16 +730,14 @@ def execute_read_device(target_name_input, command):
         # 2. MAPPING FQCN (Nama Lengkap OS untuk Ansible)
         # ==============================================================
         vendor_db = device.vendor.lower()
-        if vendor_db == 'ce':
+        if vendor_db == 'ce' or vendor_db == 'vrp':
             ansible_os = 'community.network.ce'
-        elif vendor_db == 'vrp':
-            ansible_os = 'community.network.vrp'
+            
         elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
             ansible_os = 'community.routeros.routeros'
         else:
             ansible_os = vendor_db
 
-        # Saklar khusus untuk S5300 (VRP5) agar tidak nyangkut di "---- More ----"
         terminal_type = "vt100"
 
         with open(inventory_file, "w") as f:
