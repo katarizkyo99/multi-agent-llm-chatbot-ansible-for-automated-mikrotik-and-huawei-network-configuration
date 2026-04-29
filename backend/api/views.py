@@ -104,13 +104,13 @@ RULES:
    - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4` (PING MUST ALWAYS INCLUDE count=4)
    - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8` (PING MUST ALWAYS INCLUDE -c 4)
 """
-
 PROSES_2_PROMPT = """
 Role: Multi-Vendor Network Engineer.
 Task: Output raw CLI scripts based on chat history. No markdown blocks, no greetings.
 
 VENDOR RULES:
-- HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. If L2, use 'portswitch'.
+- HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. 
+- HUAWEI STRICT RULE: NEVER generate 'portswitch' inside a logical interface like 'Vlanif'. ONLY use 'portswitch' for physical interfaces.
 - MIKROTIK: Use absolute paths (e.g., /ip address add...).
 
 REQUIRED OUTPUT FORMAT:
@@ -688,9 +688,18 @@ def execute_config(request):
        
                 result = subprocess.run(
                     playbook_cmd,
-                    env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False",
+                    env={
+                        **os.environ, 
+                        "ANSIBLE_HOST_KEY_CHECKING": "False",
                         "ANSIBLE_DEPRECATION_WARNINGS": "False",
-                        "ANSIBLE_PIPELINING": "True"},
+                        "ANSIBLE_PIPELINING": "True",
+                        "ANSIBLE_CONFIG": "/home/kyo/ta/ansible/ansible.cfg",
+                        "ANSIBLE_PERSISTENT_COMMAND_TIMEOUT": "30",
+                        "ANSIBLE_PERSISTENT_CONNECT_TIMEOUT": "30",
+                        "ANSIBLE_GATHERING": "explicit",
+                        "ANSIBLE_INJECT_FACT_VARS": "False"
+                    },
+                    
                     capture_output=True,
                     text=True
                 )
@@ -811,9 +820,18 @@ def execute_read_device(target_name_input, command):
 
         result = subprocess.run(
             playbook_cmd,
-            env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False",
+            env={
+                **os.environ, 
+                "ANSIBLE_HOST_KEY_CHECKING": "False",
                 "ANSIBLE_DEPRECATION_WARNINGS": "False",
-                "ANSIBLE_PIPELINING": "True"},
+                "ANSIBLE_PIPELINING": "True",
+                "ANSIBLE_CONFIG": "/home/kyo/ta/ansible/ansible.cfg",
+                "ANSIBLE_PERSISTENT_COMMAND_TIMEOUT": "30",
+                "ANSIBLE_PERSISTENT_CONNECT_TIMEOUT": "30",
+                "ANSIBLE_GATHERING": "explicit",
+                "ANSIBLE_INJECT_FACT_VARS": "False"
+            },
+            
             capture_output=True,
             text=True
         )
