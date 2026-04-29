@@ -181,13 +181,13 @@ export default function Home() {
                 const firstResult = execResult.results[0];
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
-                    outputMessage = `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}`;
+                    outputMessage = ` Konfigurasi berhasil diproses di perangkat ${firstResult.target}`;
                     
                 } else {
-                    outputMessage = `❌ Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}\n\n`;
+                    outputMessage = ` Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}\n\n`;
                 }
             } else {
-                outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail.";
+                outputMessage = " Eksekusi selesai tapi tidak ada respons detail.";
             }
 
             // Menyimpan log riwayat ke database
@@ -206,7 +206,7 @@ export default function Home() {
 
             setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: outputMessage }] } : c));
         } catch (error) {
-            const errorMsg = `❌ Terjadi kesalahan sistem saat memproses: ${error.message}`;
+            const errorMsg = ` Terjadi kesalahan sistem saat memproses: ${error.message}`;
             setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] } : c));
         } finally {
             setPendingConfig(null);
@@ -220,7 +220,7 @@ export default function Home() {
     const handleRejectConfig = async () => {
         setShowConfirmPopup(false);
         if (!pendingConfig) return;
-        const rejectMsg = "❌ Konfigurasi dibatalkan oleh pengguna.";
+        const rejectMsg = " Konfigurasi dibatalkan oleh pengguna.";
         try {
             await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/add/`, {
                 method: "POST",
