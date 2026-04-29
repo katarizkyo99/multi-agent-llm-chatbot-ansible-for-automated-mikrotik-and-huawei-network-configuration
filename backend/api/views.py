@@ -101,8 +101,8 @@ RULES:
    - If the user requests to view, display, check the status, or PING (e.g., “show ip”, “ping 8.8.8.8”).
    - DO NOT display the Markdown block. DO NOT ask “Execute this now?”. 
    - IMMEDIATELY output exactly as follows: `[READ_DEVICE] device_name, vendor-specific_native_command`
-   - Mikrotik example: `[READ_DEVICE] routera, /ip address print`
-   - Huawei example: `[READ_DEVICE] routerb, display ip interface brief`
+   - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4` (PING MUST ALWAYS INCLUDE count=4)
+   - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8` (PING MUST ALWAYS INCLUDE -c 4)
 """
 
 PROSES_2_PROMPT = """
