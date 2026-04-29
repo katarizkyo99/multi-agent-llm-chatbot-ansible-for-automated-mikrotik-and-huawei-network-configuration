@@ -127,6 +127,8 @@ Konfigurasi:
 class ChatView(APIView):
    def post(self, request):
       start_time = time.time()
+      llm_time = 0.0
+      ansible_time = 0.0
       api_key = os.getenv("GROQ_API_KEY")
       if not api_key:
          return Response({"error": "API Key missing."}, status=500)
@@ -188,7 +190,7 @@ class ChatView(APIView):
           proses_1_reply = ""
           # Proses Gambar
           if uploaded_image:
-              print("▶️ Proses 1 (Vision) Bekerja...")
+              print(" Proses 1 (Vision) Bekerja...")
               uploaded_image.seek(0)
               image_bytes = uploaded_image.read()
               base64_str = base64.b64encode(image_bytes).decode('utf-8')
@@ -208,12 +210,14 @@ class ChatView(APIView):
               )
           else:
               # Proses Teks
-              print("▶️ Proses 1 (Text Analyzer) Bekerja...")
+              print(" Proses 1 (Text Analyzer) Bekerja...")
+              t0_llm = time.time()
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
                   model="openai/gpt-oss-120b", 
                   messages=messages_for_llm
               )
+              llm_time += (time.time() - t0_llm)
 
           final_bot_reply = sanitize_mermaid(proses_1_reply)
             
@@ -224,7 +228,7 @@ class ChatView(APIView):
           # =================================================================
           
           if "[GENERATE_CONFIG]" in proses_1_reply:
-              print("▶️ User Setuju. Proses 2 (Configurator) Mengambil Alih...")
+              print(" User Setuju. Proses 2 (Configurator) Mengambil Alih...")
               
               messages_for_proses_2 = [
                   {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}"}
@@ -242,7 +246,7 @@ class ChatView(APIView):
 
          # Membaca status/konfigurasi perangkat jaringan
           elif "[READ_DEVICE]" in proses_1_reply:
-              print("▶️ Intent: Membaca status perangkat...")
+              print("Membaca status perangkat...")
               try:
                   # Parsing
                   raw_intent = proses_1_reply.replace("[READ_DEVICE]", "").strip()
@@ -251,14 +255,17 @@ class ChatView(APIView):
                   if len(parts) == 2:
                       target_device = parts[0].strip()
                       target_command = parts[1].strip()
-                      
+
+                      t0_ansible = time.time()
                       # Memanggil fungsi eksekutor Ansible Read
                       ansible_output = execute_read_device(target_device, target_command)
 
+                      ansible_time += (time.time() - t0_ansible)
+                      
                       if "❌" in ansible_output or "Gagal" in ansible_output:
                           final_bot_reply = ansible_output
                       else:
-                          print("▶️ Memformat output raw menjadi rapi...")
+                          print(" Memformat output raw menjadi rapi...")
                           format_messages = [
                               {"role": "system", "content": (
                                   "Format raw network CLI output. RULES:\n"
@@ -274,26 +281,26 @@ class ChatView(APIView):
                               table_output = call_groq_llm(api_key, "llama-3.1-8b-instant", format_messages, temperature=0.1)
                               
                               final_bot_reply = (
-                                  f"✅ **Data Perangkat {target_device}**\n"
+                                  f" **Data Perangkat {target_device}**\n"
                                   f"- **Perintah:** `{target_command}`\n\n"
                                   f"{table_output}"
                               )
                           except Exception:
                               final_bot_reply = (
-                                  f"✅ **Data Perangkat {target_device}**\n"
+                                  f" **Data Perangkat {target_device}**\n"
                                   f"- **Perintah:** `{target_command}`\n\n"
                                   f"```text\n{ansible_output}\n```"
                               )
                   else:
-                      final_bot_reply = "⚠️ Maaf, asisten gagal memformat perintah baca perangkat."
+                      final_bot_reply = " Maaf, asisten gagal memformat perintah baca perangkat."
                       
               except Exception as e:
-                  final_bot_reply = f"❌ Gagal memproses perintah baca: {str(e)}"
+                  final_bot_reply = f"Gagal memproses perintah baca: {str(e)}"
           
   
           # Menambahkan perangkat baru ke DB
           elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
-                print("▶️ Intent: Menambahkan perangkat ke DB...")
+                print("Menambahkan perangkat ke DB...")
                 import re 
                 try:
                     parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
@@ -321,7 +328,7 @@ class ChatView(APIView):
                         }
                     )
                     
-                    final_bot_reply = bot_text + "\n\n✅ **Berhasil:** Perangkat telah ditambahkan ke database!"
+                    final_bot_reply = bot_text + "\n\n **Berhasil:** Perangkat telah ditambahkan ke database!"
                 except Exception as e:
                     error_msg = str(e)
                     print(f"Gagal menyimpan perangkat: {error_msg}")
@@ -331,7 +338,7 @@ class ChatView(APIView):
 
           # Menghapus Perangkat  
           elif "[DELETE_DEVICE_FROM_DB]" in proses_1_reply:
-                print("▶️ Intent: Menghapus perangkat dari DB...")
+                print("Menghapus perangkat dari DB...")
                 import re
                 try:
                     parts = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")
@@ -352,13 +359,13 @@ class ChatView(APIView):
                     print(f"🔍 DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
                     
                     if deleted_count > 0:
-                        final_bot_reply = bot_text + f"\n\n🗑️ **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
+                        final_bot_reply = bot_text + f"\n\n **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
                     else:
-                        final_bot_reply = bot_text + f"\n\n⚠️ **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Pastikan namanya diketik dengan benar."
+                        final_bot_reply = bot_text + f"\n\n **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Pastikan namanya diketik dengan benar."
                         
                 except Exception as e:
                     error_msg = str(e)
-                    print(f"❌ Gagal menghapus perangkat: {error_msg}")
+                    print(f"Gagal menghapus perangkat: {error_msg}")
                     final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
           
           # Penyimpanan Pesan ke DB dan Pemrosesan Respons Final
@@ -369,8 +376,15 @@ class ChatView(APIView):
 
           end_time = time.time()
           execution_time = end_time - start_time
-        
-          print(f"\n[LOG PENGUJIAN] Waktu Respons LLM: {execution_time:.3f} detik\n")
+
+
+          print(f"\n{'='*40}")
+          print(f"[LOG PENGUJIAN] DETAIL WAKTU EKSEKUSI")
+          print(f"{'='*40}")
+          print(f"Waktu Respons LLM (Total) : {llm_time:.3f} detik")
+          print(f"Waktu Eksekusi Ansible    : {ansible_time:.3f} detik")
+          print(f"Total Waktu Siklus Sistem : {execution_time:.3f} detik")
+          print(f"{'='*40}\n")
           
           return Response({
               "chat_id": chat.id,
@@ -661,6 +675,10 @@ def execute_config(request):
                             f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no -o ControlMaster=auto -o ControlPersist=600s -o ControlPath=/tmp/ansible-ssh-%h-%p-%r'\n")
 
                 # Menjalankan Subprocess Playbook Ansible
+
+                print("\n Menjalankan Playbook Ansible...")
+                t0_ansible_conf = time.time()
+                
                 playbook_path = "/home/kyo/ta/ansible/apply_config.yml"   
                 playbook_cmd = [
                     "ansible-playbook",
@@ -678,6 +696,9 @@ def execute_config(request):
                     text=True
                 )
 
+                waktu_ansible_conf = time.time() - t0_ansible_conf
+                print(f"⚙️ [LOG PENGUJIAN CONFIG] Waktu Eksekusi Ansible: {waktu_ansible_conf:.3f} detik\n")
+                
                 print(f"\n{'='*20} ANSIBLE OUTPUT: {final_target_name} {'='*20}")
                 print(">>> STDOUT (Output Normal):")
                 print(result.stdout if result.stdout else "[KOSONG]")
@@ -738,7 +759,7 @@ def execute_read_device(target_name_input, command):
                         break
         
         if not final_target_name:
-            return f"❌ Gagal: Perangkat '{target_name_input}' tidak ditemukan di database."
+            return f" Gagal: Perangkat '{target_name_input}' tidak ditemukan di database."
 
         device = NetworkDevice.objects.get(name=final_target_name)
         vars_file_path = f"/tmp/vars_read_{final_target_name.replace(' ', '_')}.json"
@@ -815,15 +836,15 @@ def execute_read_device(target_name_input, command):
                     clean_output = clean_output.strip()
                     return clean_output
                 else:
-                    return f"❌ Berhasil dieksekusi, tapi gagal menemukan blok 'msg' di output.\n\nRaw Output:\n{result.stdout}"
+                    return f" Berhasil dieksekusi, tapi gagal menemukan blok 'msg' di output.\n\nRaw Output:\n{result.stdout}"
             except Exception as e:
-                return f"❌ Gagal mengekstrak teks: {str(e)}\n\nRaw:\n{result.stdout}"
+                return f" Gagal mengekstrak teks: {str(e)}\n\nRaw:\n{result.stdout}"
         
         else:
-            return f"❌ Gagal mengambil data. Detail error:\n{result.stderr or result.stdout}"
+            return f" Gagal mengambil data. Detail error:\n{result.stderr or result.stdout}"
 
     except Exception as e:
-        return f"❌ Kesalahan sistem: {str(e)}"
+        return f" Kesalahan sistem: {str(e)}"
 
 
 @api_view(["GET"])
