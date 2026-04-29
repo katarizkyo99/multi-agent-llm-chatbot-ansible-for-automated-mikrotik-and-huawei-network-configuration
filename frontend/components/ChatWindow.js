@@ -37,7 +37,7 @@ const MermaidGraph = ({ chart }) => {
     if (hasError) {
         return (
             <div className="bg-red-50 text-red-600 p-4 rounded-xl my-3 border border-red-200 text-sm overflow-x-auto">
-                <p className="font-bold mb-2">⚠️ Gagal menggambar topologi (Format Mermaid Tidak Valid):</p>
+                <p className="font-bold mb-2"> Gagal menggambar topologi (Format Mermaid Tidak Valid):</p>
                 <pre className="text-xs bg-red-100 p-2 rounded">{chart}</pre>
             </div>
         );
