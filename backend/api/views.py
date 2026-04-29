@@ -658,8 +658,8 @@ def execute_config(request):
                             f"ansible_connection=network_cli "
                             f"ansible_terminal_type={terminal_type} "
                             f"ansible_command_timeout=60 "
-                            f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
-               
+                            f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no -o ControlMaster=auto -o ControlPersist=600s -o ControlPath=/tmp/ansible-ssh-%h-%p-%r'\n")
+
                 # Menjalankan Subprocess Playbook Ansible
                 playbook_path = "/home/kyo/ta/ansible/apply_config.yml"   
                 playbook_cmd = [
@@ -671,7 +671,9 @@ def execute_config(request):
        
                 result = subprocess.run(
                     playbook_cmd,
-                    env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False"},
+                    env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False",
+                        "ANSIBLE_DEPRECATION_WARNINGS": "False",
+                        "ANSIBLE_PIPELINING": "True"},
                     capture_output=True,
                     text=True
                 )
@@ -775,7 +777,8 @@ def execute_read_device(target_name_input, command):
                     f"ansible_connection=network_cli "        
                     f"ansible_terminal_type={terminal_type} "   
                     f"ansible_command_timeout=60 "             
-                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no'\n")
+                    f"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KexAlgorithms=+diffie-hellman-group1-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=+aes128-cbc,3des-cbc -o PubkeyAuthentication=no -o ControlMaster=auto -o ControlPersist=600s -o ControlPath=/tmp/ansible-ssh-%h-%p-%r'\n")
+
         # ==============================================================
         # 3. JALANKAN ANSIBLE READ
         # ==============================================================
@@ -789,7 +792,8 @@ def execute_read_device(target_name_input, command):
         result = subprocess.run(
             playbook_cmd,
             env={**os.environ, "ANSIBLE_HOST_KEY_CHECKING": "False",
-                "ANSIBLE_DEPRECATION_WARNINGS": "False"},
+                "ANSIBLE_DEPRECATION_WARNINGS": "False",
+                "ANSIBLE_PIPELINING": "True"},
             capture_output=True,
             text=True
         )
