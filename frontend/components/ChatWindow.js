@@ -68,12 +68,12 @@ const MessageBubble = ({ message, BASE_URL }) => {
     return (
         <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
             <div
-                className={`mx-4 my-2 p-4 rounded-2xl max-w-[85%] overflow-x-auto ${
+                className={`mx-4 my-2 p-4 rounded-2xl max-w-[90%] sm:max-w-[85%] min-w-0 overflow-x-auto ${
                     isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}
             >
                 {message.text && (
-                    <div className="prose prose-sm max-w-none text-current break-words whitespace-pre-wrap w-full">
+                    <div className="prose prose-sm max-w-none text-current break-words whitespace-pre-wrap min-w-0 w-ful">
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -85,7 +85,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                                     }
                                     
                                     return (
-                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto mt-2" {...props}>
+                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto max-w-full mt-2" {...props}>
                                             {children}
                                         </pre>
                                     );
@@ -171,7 +171,7 @@ export default function ChatWindow({
 
     return (
         <>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4">
                 {activeChat.messages.map((m, i) => (
                     <MessageBubble key={m.id || i} message={m} BASE_URL={BASE_URL} />
                 ))}
