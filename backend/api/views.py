@@ -47,6 +47,7 @@ def sanitize_mermaid(text):
         
         line = re.sub(r'([a-zA-Z0-9_]+)\[(.*?)\]', clean_node, line)
         line = re.sub(r'-\.[^>]*>', '-->', line)
+        line = re.sub(r'-{2,}>+', '-->', line)
         line = re.sub(r'-->\|.*?\|', '-->', line)
         line = re.sub(r'---\|.*?\|', '---', line)
         line = re.sub(r'-->\|[^\s]*', '-->', line) 
@@ -111,7 +112,8 @@ Konfigurasi:
 class ChatView(APIView):
    def post(self, request):
       start_time = time.time()
-      llm_time = 0.0
+      llm_text_time = 0.0   
+      llm_vision_time = 0.0
       ansible_time = 0.0
       api_key = os.getenv("GROQ_API_KEY")
       if not api_key:
@@ -175,6 +177,9 @@ class ChatView(APIView):
           # Proses Gambar
           if uploaded_image:
               print(" Proses 1 (Vision) Bekerja...")
+
+              t0_vision = time.time()
+              
               uploaded_image.seek(0)
               image_bytes = uploaded_image.read()
               base64_str = base64.b64encode(image_bytes).decode('utf-8')
@@ -187,7 +192,8 @@ class ChatView(APIView):
                   ]}
               ]
 
-              t0_llm = time.time()
+              llm_vision_time += (time.time() - t0_vision)
+              
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
                   model="meta-llama/llama-4-scout-17b-16e-instruct", 
@@ -196,14 +202,16 @@ class ChatView(APIView):
               llm_time += (time.time() - t0_llm)
           else:
               # Proses Teks
-              print(" Proses 1 (Text Analyzer) Bekerja...")
-              t0_llm = time.time()
+              print(" Proses 1 (Text Analyzer) Bekerja...")             
+              
+              t0_text = time.time()
+              
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
                   model="openai/gpt-oss-120b", 
                   messages=messages_for_llm
               )
-              llm_time += (time.time() - t0_llm)
+              llm_text_time += (time.time() - t0_text)
 
           final_bot_reply = sanitize_mermaid(proses_1_reply)
             
@@ -363,13 +371,13 @@ class ChatView(APIView):
           end_time = time.time()
           execution_time = end_time - start_time
 
-
           print(f"\n{'='*40}")
           print(f"[LOG PENGUJIAN] DETAIL WAKTU EKSEKUSI")
           print(f"{'='*40}")
-          print(f"Waktu Respons LLM (Total) : {llm_time:.3f} detik")
-          print(f"Waktu Eksekusi Ansible    : {ansible_time:.3f} detik")
-          print(f"Total Waktu Siklus Sistem : {execution_time:.3f} detik")
+          print(f"Waktu Respons LLM (Vision) : {llm_vision_time:.3f} detik")
+          print(f"Waktu Respons LLM (Teks)   : {llm_text_time:.3f} detik")
+          print(f"Waktu Eksekusi Ansible     : {ansible_time:.3f} detik")
+          print(f"Total Waktu Siklus Sistem  : {execution_time:.3f} detik")
           print(f"{'='*40}\n")
           
           return Response({
