@@ -787,13 +787,15 @@ def execute_read_device(target_name_input, command):
         vendor_db = device.vendor.lower()
         if vendor_db == 'ce' or vendor_db == 'vrp':
             ansible_os = 'community.network.ce'
+            terminal_type = "vt100"
             
         elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
             ansible_os = 'community.routeros.routeros'
+            terminal_type = "dumb"
+            
         else:
             ansible_os = vendor_db
-
-        terminal_type = "vt100"
+            terminal_type = "dumb"
 
         with open(inventory_file, "w") as f:
             f.write("[routers]\n")
