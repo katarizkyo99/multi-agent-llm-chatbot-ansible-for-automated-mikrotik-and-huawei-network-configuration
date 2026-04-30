@@ -326,7 +326,7 @@ export default function Home() {
     // RENDER / UI
     // =========================================================================
     return (
-        <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden relative">
+        <div className="flex h-screen bg-gray-50 text-gray-800 overflow-x-auto relative">
             <Sidebar
                 isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
