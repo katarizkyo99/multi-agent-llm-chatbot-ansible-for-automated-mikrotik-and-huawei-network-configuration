@@ -17,7 +17,7 @@
           "input does not match" in (mikrotik_result | string | lower) or
           "no such item" in (mikrotik_result | string | lower)
 
-- name: Apply config to Huawei
+    - name: Apply config to Huawei
       ansible.netcommon.cli_command:
         command: "{{ item }}"
       loop: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
