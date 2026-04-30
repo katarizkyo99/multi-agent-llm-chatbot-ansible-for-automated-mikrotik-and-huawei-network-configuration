@@ -62,7 +62,7 @@ def sanitize_mermaid(text):
             def clean_node(match):
                 content = match.group(1)
                 content = content.replace('"', '').replace("<br>", " ").replace("(", "").replace(")", "")
-                return f"[{content}]"
+                return f'["{content}"]'
             line = re.sub(r'\[(.*?)\]', clean_node, line)
             
             cleaned_lines.append(line)
