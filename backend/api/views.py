@@ -35,64 +35,35 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
 
-# ==============================================================================
-# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
-# ==============================================================================
 def sanitize_mermaid(text):
-    # Jika tidak ada indikasi gambar topologi, kembalikan teks asli
-    if "graph TD" not in text and "```mermaid" not in text:
-        return text
-
-    # Fungsi sapu bersih baris per baris
-    def clean_line(line):
-        # 1. Libas semua panah halusinasi (contoh: -.3.3.3.1, -.->, dll) menjadi panah solid -->
-        line = re.sub(r'-\.[^ \[]*', '-->', line) 
-        line = re.sub(r'---\|([^|]+)\|>', r'---| \1 |', line)
-        line = re.sub(r'-->\|([^|]+)\|>', r'-->| \1 |', line)
-        
-        # 2. Bersihkan label di tengah garis |...|
-        def clean_edge(match):
-            label = match.group(1).replace("<br>", " ").replace("(", "").replace(")", "").replace('"', '')
-            return f"|{label}|"
-        line = re.sub(r'\|([^|]+)\|', clean_edge, line)
-        
-        # 3. Bersihkan dan PAKSA kutip ganda di dalam node [...]
+    import re
+    
+    cleaned_lines = []
+    for line in text.split('\n'):
+        # 1. BUNGKUS SEMUA NODE DENGAN KUTIP GANDA SECARA PAKSA
+        # Mengubah A[Router (10.1.1.1)] menjadi A["Router (10.1.1.1)"]
         def clean_node(match):
-            content = match.group(1).replace('"', '').replace("<br>", " ")
-            return f'["{content}"]'
-        line = re.sub(r'\[(.*?)\]', clean_node, line)
+            node_id = match.group(1)
+            content = match.group(2).replace('"', '').replace("<br>", " ")
+            return f'{node_id}["{content}"]'
         
-        return line
-
-    # Jika AI patuh pakai ```mermaid
-    if "```mermaid" in text:
-        parts = text.split("```mermaid")
-        for i in range(1, len(parts), 2):
-            subparts = parts[i].split("```")
-            mermaid_code = subparts[0]
-            
-            cleaned_lines = [clean_line(line) for line in mermaid_code.split('\n')]
-            subparts[0] = "\n".join(cleaned_lines)
-            parts[i] = "```".join(subparts)
-            
-        return "```mermaid".join(parts)
-    
-    # Jika AI ngeyel TIDAK pakai ```mermaid, tapi langsung 'graph TD'
-    elif "graph TD" in text:
-        lines = text.split('\n')
-        cleaned_lines = []
-        in_graph = False
-        for line in lines:
-            if "graph TD" in line:
-                in_graph = True
-            
-            if in_graph and line.strip() != "":
-                cleaned_lines.append(clean_line(line))
-            else:
-                cleaned_lines.append(line)
-        return "\n".join(cleaned_lines)
-    
-    return text
+        # Eksekusi penambahan kutip pada format ID[...]
+        line = re.sub(r'([a-zA-Z0-9_]+)\[(.*?)\]', clean_node, line)
+        
+        # 2. HANCURKAN PANAH HALUSINASI (Misal: -.3.3.3.1)
+        line = re.sub(r'-\.[^>]*>', '-->', line)
+        
+        # 3. BERSIHKAN LABEL GARIS YANG MERUSAK PARSER
+        # Kadang AI membuat label tapi lupa menutupnya (-->|3.3.3 B[...])
+        # Daripada membuat crash, kita babat habis label di garis panah
+        line = re.sub(r'-->\|.*?\|', '-->', line)
+        line = re.sub(r'---\|.*?\|', '---', line)
+        line = re.sub(r'-->\|[^\s]*', '-->', line) # Handle label yang tidak ditutup
+        line = re.sub(r'---\|[^\s]*', '---', line) # Handle label yang tidak ditutup
+        
+        cleaned_lines.append(line)
+        
+    return '\n'.join(cleaned_lines)
 
 # ==============================================================================
 # SYSTEM PROMPTS 
