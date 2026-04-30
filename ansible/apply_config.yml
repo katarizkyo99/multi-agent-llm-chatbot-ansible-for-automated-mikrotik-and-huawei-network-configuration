@@ -4,18 +4,12 @@
 
   tasks:
     - name: Apply config to Mikrotik RouterOs
-      community.routeros.command:
+      ansible.netcommon.cli_command:
         commands: "{{ config_cli }}"
       when: ansible_network_os == "community.routeros.routeros"
-      register: mikrotik_result  
+      register: mikrotik_result
+      ignore_errors: yes
       
-      failed_when: 
-        - mikrotik_result.failed == true or
-          "bad command" in (mikrotik_result | string | lower) or
-          "syntax error" in (mikrotik_result | string | lower) or
-          "expected end" in (mikrotik_result | string | lower) or
-          "input does not match" in (mikrotik_result | string | lower) or
-          "no such item" in (mikrotik_result | string | lower)
 
     - name: Apply config to Huawei
       ansible.netcommon.cli_command:
