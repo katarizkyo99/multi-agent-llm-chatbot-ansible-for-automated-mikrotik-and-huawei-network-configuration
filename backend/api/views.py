@@ -34,6 +34,9 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
+# ==============================================================================
+# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
+# ==============================================================================
 def sanitize_mermaid(text):
     if "```mermaid" not in text:
         return text
@@ -46,14 +49,15 @@ def sanitize_mermaid(text):
         cleaned_lines = []
         for line in mermaid_code.split('\n'):
             
-            # HANDLE TYPO PANAH LLM: 
+            # Cleaning Halusinasi Panah/Garis 
+            line = re.sub(r'-\.+.*?>', '-->', line) 
+            line = re.sub(r'-\.+.*? ', '--> ', line) 
             line = re.sub(r'---\|([^|]+)\|>', r'---| \1 |', line)
             line = re.sub(r'-->\|([^|]+)\|>', r'-->| \1 |', line)
             
             # CLEANING TEKS DI LABEL GARIS |...|
             def clean_edge(match):
                 label = match.group(1)
-                # Sapu bersih <br>, kurung, kutip, dan ubah garis miring / jadi spasi
                 label = label.replace("<br>", " ").replace("(", "").replace(")", "").replace('"', '').replace("/", " ")
                 return f"|{label}|"
             line = re.sub(r'\|([^|]+)\|', clean_edge, line)
@@ -61,7 +65,7 @@ def sanitize_mermaid(text):
             # CLEANING TEKS DI DALAM NODE [...]
             def clean_node(match):
                 content = match.group(1)
-                content = content.replace('"', '').replace("<br>", " ").replace("(", "").replace(")", "")
+                content = content.replace('"', '').replace("<br>", " ")
                 return f'["{content}"]'
             line = re.sub(r'\[(.*?)\]', clean_node, line)
             
