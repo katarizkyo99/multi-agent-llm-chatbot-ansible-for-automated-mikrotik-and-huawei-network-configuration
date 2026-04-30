@@ -17,12 +17,20 @@
           "input does not match" in (mikrotik_result | string | lower) or
           "no such item" in (mikrotik_result | string | lower)
 
-    - name: Apply config to Huawei (Super Fast Mode)
-      ansible.netcommon.cli_config:
-        config: "{{ config_cli }}"
-      when: ansible_network_os == 'community.network.ce'
+- name: Apply config to Huawei
+      ansible.netcommon.cli_command:
+        command: "{{ item }}"
+      loop: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
+      when: ansible_network_os == 'community.network.ce' and item | trim != ''
       register: huawei_result
-      ignore_errors: yes
+
+      failed_when:
+        - huawei_result.failed == true or
+          "unrecognized command" in (huawei_result | string | lower) or
+          "wrong parameter" in (huawei_result | string | lower) or
+          "error:" in (huawei_result | string | lower) or
+          "incomplete command" in (huawei_result | string | lower) or
+          "ambiguous command" in (huawei_result | string | lower)
       
     - name: "Tampilkan Hasil Eksekusi Perangkat"
       debug:
