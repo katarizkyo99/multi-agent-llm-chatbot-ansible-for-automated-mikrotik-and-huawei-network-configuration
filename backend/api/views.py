@@ -52,14 +52,14 @@ def sanitize_mermaid(text):
         
         line = re.sub(r'-\.[^>]*>', '-->', line)
         line = re.sub(r'-{2,}>+', '-->', line)
+        line = re.sub(r'<+-{2,}>*', '-->', line)
         
         def clean_edge(match):
-            arrow = match.group(1) 
-            label = match.group(2).replace('"', '').replace("(", "").replace(")", "").replace("<br>", " ").strip()
+            arrow = "-->" 
+            label = match.group(2).replace('"', '').replace("(", "").replace(")", "").replace("<br>", " ").replace(">", "").replace("<", "").strip()
             return f"{arrow}|{label}|"
             
-        line = re.sub(r'(-->|---)\|([^|]+)\|', clean_edge, line)
-        
+        line = re.sub(r'(-->|---)\|([^|]+)\|', clean_edge, line)    
         line = re.sub(r'(-->|---)\|[^|]*$', r'\1', line)
         
         cleaned_lines.append(line)
