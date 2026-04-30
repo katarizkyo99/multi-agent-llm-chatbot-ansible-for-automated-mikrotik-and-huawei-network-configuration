@@ -785,6 +785,11 @@ def execute_read_device(target_name_input, command):
         # 2. MAPPING FQCN (Nama Lengkap OS untuk Ansible)
         # ==============================================================
         vendor_db = device.vendor.lower()
+
+        if vendor_db == 'routeros' or vendor_db == 'mikrotik':
+            if "+ctw" not in safe_user:
+                safe_user = f"{safe_user}+ctw"
+        
         if vendor_db == 'ce' or vendor_db == 'vrp':
             ansible_os = 'community.network.ce'
             terminal_type = "vt100"
