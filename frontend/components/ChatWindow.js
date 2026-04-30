@@ -68,7 +68,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
     return (
         <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
             <div
-                className={`mx-4 my-2 p-4 rounded-2xl max-w-[85%] ${
+                className={`mx-4 my-2 p-4 rounded-2xl max-w-[85%] overflow-x-auto ${
                     isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}
             >
