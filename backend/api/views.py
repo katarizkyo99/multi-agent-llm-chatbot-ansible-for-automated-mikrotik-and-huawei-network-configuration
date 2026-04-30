@@ -617,10 +617,12 @@ def execute_config(request):
                         and not ":" in line.strip()
                     ]
                     final_config_payload = "\n".join(cleaned_list)
-                    print(f" Config Huawei Bersih: {final_config_payload}")
+                    print(f" Config Huawei : {final_config_payload}")
    
                 else:
-                   final_config_payload = [line.strip() for line in raw_lines if line.strip() != ""]
+                   cleaned_list = [line.strip() for line in raw_lines if line.strip() != ""]
+                   final_config_payload = " ; ".join(cleaned_list)
+                   print(f" Config MikroTik : {final_config_payload}")
                    
                 print(f"Payload tipe: {type(final_config_payload)}") 
                 print(f"Payload isi: {final_config_payload}")  
