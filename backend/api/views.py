@@ -194,7 +194,7 @@ class ChatView(APIView):
 
               vision_messages = [
                   {"role": "user", "content": [
-                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[Detail devices, IPs, vendors, interfaces]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nID1[\"Name (Vendor)\\nIP\"] -->|Interface| ID2[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Use \\n in nodes for line breaks.\n2. Put interface names on edges (e.g., -->|G0/0|).\n3. ONLY ONE mermaid block. No yapping."},
+                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[WRITE IN INDONESIAN: Explain in detail which device connects to which device via which interface. Include IPs and vendors]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nID1[\"Name (Vendor)\\nIP\"] -->|Interface| ID2[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Use \\n in nodes for line breaks.\n2. Put interface names on edges (e.g., -->|G0/0|).\n3. ONLY ONE mermaid block. No yapping."},
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
