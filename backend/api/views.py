@@ -35,6 +35,9 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
 
+# ==============================================================================
+# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
+# ==============================================================================
 def sanitize_mermaid(text):
     import re
     
@@ -46,12 +49,18 @@ def sanitize_mermaid(text):
             return f'{node_id}["{content}"]'
         
         line = re.sub(r'([a-zA-Z0-9_]+)\[(.*?)\]', clean_node, line)
+        
         line = re.sub(r'-\.[^>]*>', '-->', line)
         line = re.sub(r'-{2,}>+', '-->', line)
-        line = re.sub(r'-->\|.*?\|', '-->', line)
-        line = re.sub(r'---\|.*?\|', '---', line)
-        line = re.sub(r'-->\|[^\s]*', '-->', line) 
-        line = re.sub(r'---\|[^\s]*', '---', line)
+        
+        def clean_edge(match):
+            arrow = match.group(1) 
+            label = match.group(2).replace('"', '').replace("(", "").replace(")", "").replace("<br>", " ").strip()
+            return f"{arrow}|{label}|"
+            
+        line = re.sub(r'(-->|---)\|([^|]+)\|', clean_edge, line)
+        
+        line = re.sub(r'(-->|---)\|[^|]*$', r'\1', line)
         
         cleaned_lines.append(line)
         
@@ -74,7 +83,6 @@ RULES:
    - Node format: `ID["Name"]` (Must use \\n).
    - Lines: `-->` or `---` (No labels preferred).
    - If label needed: ONE word only (e.g., `|G0/0|`). NO spaces, IPs, VLAN, or ().
-   - STRICT RULE: Output EXACTLY ONE mermaid block. Start your response EXACTLY with the phrase "Berikut adalah representasi topologinya: ". DO NOT add conversational filler, explanations, or alternative graphs.
 4. Add Device: Need name, host, port, username, password, vendor ('routeros', 'ce', or 'vrp').
    - If missing: Ask for it.
    - If complete, output exactly at end:
@@ -186,7 +194,7 @@ class ChatView(APIView):
 
               vision_messages = [
                   {"role": "user", "content": [
-                      {"type": "text", "text": "Analisis gambar topologi ini dan ekstrak perangkatnya. WAJIB HANYA berikan SATU blok ```mermaid ... ```. Awali jawabanmu DENGAN TEPAT menggunakan kalimat: 'Berikut adalah representasi topologinya: '. DILARANG KERAS memberikan penjelasan tambahan, narasi, atau alternatif topologi lain."},
+                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[Detail devices, IPs, vendors, interfaces]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nID1[\"Name (Vendor)\\nIP\"] -->|Interface| ID2[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Use \\n in nodes for line breaks.\n2. Put interface names on edges (e.g., -->|G0/0|).\n3. ONLY ONE mermaid block. No yapping."},
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
