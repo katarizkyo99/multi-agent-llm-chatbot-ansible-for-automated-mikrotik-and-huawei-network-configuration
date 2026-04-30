@@ -111,6 +111,7 @@ Task: Output raw CLI scripts based on chat history. No markdown blocks, no greet
 VENDOR RULES:
 - HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. 
 - HUAWEI STRICT RULE: NEVER generate 'portswitch' inside a logical interface like 'Vlanif'. ONLY use 'portswitch' for physical interfaces.
+- HUAWEI OSPF: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2'). Do NOT separate them.
 - MIKROTIK: Use absolute paths (e.g., /ip address add...).
 
 REQUIRED OUTPUT FORMAT:
