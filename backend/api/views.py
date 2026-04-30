@@ -95,7 +95,7 @@ RULES:
      [ADD_DEVICE_TO_DB] {"name":"...", "host":"...", "port":"...", "username":"...", "password":"...", "vendor":"..."}
 5. Delete Device: Must output exactly:
    [DELETE_DEVICE_FROM_DB] {"name":"..."}
-6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet.
+6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet. - HUAWEI OSPF RULE: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
 7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
 8. READ/SHOW INTENT (Data Read Only): 
    - If the user requests to view, display, check the status, or PING (e.g., “show ip”, “ping 8.8.8.8”).
@@ -111,7 +111,6 @@ Task: Output raw CLI scripts based on chat history. No markdown blocks, no greet
 VENDOR RULES:
 - HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. 
 - HUAWEI STRICT RULE: NEVER generate 'portswitch' inside a logical interface like 'Vlanif'. ONLY use 'portswitch' for physical interfaces.
-- HUAWEI OSPF: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2'). Do NOT separate them.
 - MIKROTIK: Use absolute paths (e.g., /ip address add...).
 
 REQUIRED OUTPUT FORMAT:
