@@ -194,7 +194,7 @@ class ChatView(APIView):
 
               vision_messages = [
                   {"role": "user", "content": [
-                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[WRITE IN INDONESIAN: Explain in detail which device connects to which device via which interface. Include IPs and vendors]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nA[\"Name (Vendor)\\nIP\"] -->|Interface| B[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Node IDs MUST be single letters/words with NO SPACES (e.g., use A, B, R1, SW1).\n2. STRICT: You MUST use brackets [\"...\"] for nodes. NEVER use parentheses ().\n3. Use \\n in nodes for line breaks.\n4. Put interface names on edges (e.g., -->|G0/0|).\n5. ONLY ONE mermaid block. No yapping."\n},
+                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[WRITE IN INDONESIAN: Explain in detail which device connects to which device via which interface. Include IPs and vendors]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nA[\"Name (Vendor)\\nIP\"] -->|Interface| B[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Node IDs MUST be single letters/words with NO SPACES (e.g., use A, B, R1, SW1).\n2. STRICT: You MUST use brackets [\"...\"] for nodes. NEVER use parentheses ().\n3. Use \\n in nodes for line breaks.\n4. Put interface names on edges (e.g., -->|G0/0|).\n5. ONLY ONE mermaid block. No yapping."},
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
