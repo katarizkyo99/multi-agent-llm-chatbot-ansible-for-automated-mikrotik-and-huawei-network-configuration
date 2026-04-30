@@ -73,7 +73,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                 }`}
             >
                 {message.text && (
-                    <div className="prose prose-sm max-w-none text-current break-words overflow-hidden w-full">
+                    <div className="prose prose-sm max-w-none text-current break-words whitespace-pre-wrap w-full">
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
