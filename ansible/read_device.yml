@@ -20,7 +20,7 @@
       debug:
         msg: >
           {% if ansible_network_os == 'community.routeros.routeros' %}
-          {{ mikrotik_out.stdout | default('Tidak ada output') }}
+          {{ mikrotik_out.stdout [0] | default('Tidak ada output') }}
           {% elif ansible_network_os == 'community.network.ce' %}
           {{ huawei_out.stdout | default('Tidak ada output') }}
           {% endif %}
