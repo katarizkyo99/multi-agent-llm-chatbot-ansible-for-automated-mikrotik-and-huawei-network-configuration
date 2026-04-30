@@ -177,8 +177,6 @@ class ChatView(APIView):
           # Proses Gambar
           if uploaded_image:
               print(" Proses 1 (Vision) Bekerja...")
-
-              t0_vision = time.time()
               
               uploaded_image.seek(0)
               image_bytes = uploaded_image.read()
@@ -191,15 +189,17 @@ class ChatView(APIView):
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
-
-              llm_vision_time += (time.time() - t0_vision)
+              
+              t0_vision = time.time()
               
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
                   model="meta-llama/llama-4-scout-17b-16e-instruct", 
                   messages=vision_messages
               )
-              llm_time += (time.time() - t0_llm)
+              
+              llm_vision_time += (time.time() - t0_vision)
+
           else:
               # Proses Teks
               print(" Proses 1 (Text Analyzer) Bekerja...")             
