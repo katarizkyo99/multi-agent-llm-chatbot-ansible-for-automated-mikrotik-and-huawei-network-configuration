@@ -40,26 +40,17 @@ def sanitize_mermaid(text):
     
     cleaned_lines = []
     for line in text.split('\n'):
-        # 1. BUNGKUS SEMUA NODE DENGAN KUTIP GANDA SECARA PAKSA
-        # Mengubah A[Router (10.1.1.1)] menjadi A["Router (10.1.1.1)"]
         def clean_node(match):
             node_id = match.group(1)
             content = match.group(2).replace('"', '').replace("<br>", " ")
             return f'{node_id}["{content}"]'
         
-        # Eksekusi penambahan kutip pada format ID[...]
         line = re.sub(r'([a-zA-Z0-9_]+)\[(.*?)\]', clean_node, line)
-        
-        # 2. HANCURKAN PANAH HALUSINASI (Misal: -.3.3.3.1)
         line = re.sub(r'-\.[^>]*>', '-->', line)
-        
-        # 3. BERSIHKAN LABEL GARIS YANG MERUSAK PARSER
-        # Kadang AI membuat label tapi lupa menutupnya (-->|3.3.3 B[...])
-        # Daripada membuat crash, kita babat habis label di garis panah
         line = re.sub(r'-->\|.*?\|', '-->', line)
         line = re.sub(r'---\|.*?\|', '---', line)
-        line = re.sub(r'-->\|[^\s]*', '-->', line) # Handle label yang tidak ditutup
-        line = re.sub(r'---\|[^\s]*', '---', line) # Handle label yang tidak ditutup
+        line = re.sub(r'-->\|[^\s]*', '-->', line) 
+        line = re.sub(r'---\|[^\s]*', '---', line)
         
         cleaned_lines.append(line)
         
@@ -195,12 +186,14 @@ class ChatView(APIView):
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
-              
+
+              t0_llm = time.time()
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
                   model="meta-llama/llama-4-scout-17b-16e-instruct", 
                   messages=vision_messages
               )
+              llm_time += (time.time() - t0_llm)
           else:
               # Proses Teks
               print(" Proses 1 (Text Analyzer) Bekerja...")
