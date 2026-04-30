@@ -71,9 +71,10 @@ RULES:
 1. Short answers only.
 2. If asked to list devices, use Markdown table (Name, IP, Vendor).
 3. Topology (>1 device): Use mermaid graph TD.
-   - Node format: `ID["Name\\n(IP)"]` (Must use \\n).
+   - Node format: `ID["Name"]` (Must use \\n).
    - Lines: `-->` or `---` (No labels preferred).
    - If label needed: ONE word only (e.g., `|G0/0|`). NO spaces, IPs, VLAN, or ().
+   - STRICT RULE: Output EXACTLY ONE mermaid block. Start your response EXACTLY with the phrase "Berikut adalah representasi topologinya: ". DO NOT add conversational filler, explanations, or alternative graphs.
 4. Add Device: Need name, host, port, username, password, vendor ('routeros', 'ce', or 'vrp').
    - If missing: Ask for it.
    - If complete, output exactly at end:
@@ -182,10 +183,10 @@ class ChatView(APIView):
               image_bytes = uploaded_image.read()
               base64_str = base64.b64encode(image_bytes).decode('utf-8')
               final_image_data = f"data:{uploaded_image.content_type or 'image/jpeg'};base64,{base64_str}"
-              
+
               vision_messages = [
                   {"role": "user", "content": [
-                      {"type": "text", "text": "Analisis gambar topologi ini dan jelaskan perangkatnya. Buatkan juga format ```mermaid ... ``` nya."},
+                      {"type": "text", "text": "Analisis gambar topologi ini dan ekstrak perangkatnya. WAJIB HANYA berikan SATU blok ```mermaid ... ```. Awali jawabanmu DENGAN TEPAT menggunakan kalimat: 'Berikut adalah representasi topologinya: '. DILARANG KERAS memberikan penjelasan tambahan, narasi, atau alternatif topologi lain."},
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
