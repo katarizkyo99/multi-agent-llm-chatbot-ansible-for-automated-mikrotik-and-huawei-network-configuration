@@ -625,7 +625,12 @@ def execute_config(request):
                     print(f" Config Huawei : {final_config_payload}")
    
                 else:
-                   cleaned_list = [line.strip() for line in raw_lines if line.strip() != ""]
+                   cleaned_list = [
+                       line.strip() for line in raw_lines 
+                       if line.strip() != ""
+                       and not line.strip().lower().startswith("ip address:")
+                       and not line.strip().lower().startswith("target:")
+                   ]
                    final_config_payload = " ; ".join(cleaned_list)
                    print(f" Config MikroTik : {final_config_payload}")
                    
@@ -662,6 +667,8 @@ def execute_config(request):
                 elif vendor_db == 'routeros' or vendor_db == 'mikrotik':
                     ansible_os = 'community.routeros.routeros'
                     terminal_type = "dumb"
+                    if "+ctw" not in safe_user:
+                        safe_user = f"{safe_user}+ctw"
                 else:
                     ansible_os = vendor_db
                     terminal_type = "dumb"
