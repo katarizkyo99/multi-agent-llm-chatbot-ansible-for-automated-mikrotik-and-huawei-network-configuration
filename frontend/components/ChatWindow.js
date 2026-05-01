@@ -68,12 +68,12 @@ const MessageBubble = ({ message, BASE_URL }) => {
     return (
         <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
             <div
-                className={`mx-4 my-2 p-4 rounded-2xl max-w-[90%] sm:max-w-[85%] min-w-0 overflow-x-auto ${
+                className={`mx-4 my-2 p-4 rounded-2xl max-w-[90%] sm:max-w-[85%] min-w-0 overflow-hidden ${
                     isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}
             >
                 {message.text && (
-                    <div className="prose prose-sm max-w-none text-current break-words whitespace-pre-wrap min-w-0 w-ful">
+                    <div className="prose prose-sm max-w-none text-current break-words whitespace-pre-wrap min-w-0 w-full">
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
