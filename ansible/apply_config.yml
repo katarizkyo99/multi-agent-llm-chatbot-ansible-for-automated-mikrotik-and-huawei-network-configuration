@@ -24,6 +24,6 @@
       debug:
         msg: 
           - "=== OUTPUT MIKROTIK ==="
-          - "{{ mikrotik_result.stdout_lines | default('N/A') }}"
+          - "{{ mikrotik_result.results | default([]) | map(attribute='stdout') | list | default('N/A') }}"
           - "=== OUTPUT HUAWEI ==="
           - "{{ huawei_result.results | map(attribute='stdout') | list | default('N/A') }}"
