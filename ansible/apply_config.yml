@@ -10,6 +10,8 @@
       when: ansible_network_os == "community.routeros.routeros" and item | trim != ''
       register: mikrotik_result
       ignore_errors: yes
+      failed_when: "'expected' in (mikrotik_result.stdout | default('')) or 'bad command' in (mikrotik_result.stdout | default(''))"
+      changed_when: "'expected' not in (mikrotik_result.stdout | default('')) and 'bad command' not in (mikrotik_result.stdout | default(''))"
       
 
     - name: Apply config to Huawei
