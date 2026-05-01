@@ -99,22 +99,24 @@ RULES:
    - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8` (PING MUST ALWAYS INCLUDE -c 4)
 """
 PROSES_2_PROMPT = """
-Role: Multi-Vendor Network Engineer.
-Task: Output raw CLI scripts based on chat history. No markdown blocks, no greetings.
+Role: Network Engineer. Task: Output raw CLI only. No markdown, no yapping.
 
 VENDOR RULES:
-- HUAWEI: NO system-view, quit, return. Use 'undo shutdown'. 
-- HUAWEI STRICT RULE: NEVER generate 'portswitch' inside a logical interface like 'Vlanif'. ONLY use 'portswitch' for physical interfaces.
-- MIKROTIK: Use absolute paths (e.g., /ip address add...).
+- HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces, NEVER logical (e.g., Vlanif).
+- MIKROTIK: Use absolute paths (/ip address add...).
 
-REQUIRED OUTPUT FORMAT:
-Target: [DB Device Name]
-IP Address: [DB IP Address]
+CRITICAL RULES FOR 'Konfigurasi':
+1. Output ONLY pure raw CLI commands.
+2. NO comments, NO inline IP labels, NO text formatting.
+3. NEVER use semicolons (;). STRICTLY ONE command per line.
+
+REQUIRED FORMAT:
+Target: [Device Name]
+IP Address: [IP]
 Konfigurasi:
-[CLI command 1]
-[CLI command 2]
+[Raw CLI command 1]
+[Raw CLI command 2]
 """
-
 # ==============================================================================
 # PIPELINE CHATBOT 
 # ==============================================================================
