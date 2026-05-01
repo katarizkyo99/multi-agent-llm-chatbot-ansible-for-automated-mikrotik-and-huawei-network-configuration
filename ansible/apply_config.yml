@@ -4,15 +4,19 @@
 
   tasks:
     - name: Apply config to Mikrotik RouterOs
-      ansible.netcommon.cli_command:
-        command: "{{ item }}"
-      loop: "{{ config_cli.split('\n') }}"
-      when: ansible_network_os == "community.routeros.routeros" and item | trim != ''
-      register: mikrotik_result
-      ignore_errors: yes
-      failed_when: "'expected' in (mikrotik_result.stdout | default('') | lower) or 'bad command' in (mikrotik_result.stdout | default('') | lower) or 'syntax error' in (mikrotik_result.stdout | default('') | lower)"
-      changed_when: "'expected' not in (mikrotik_result.stdout | default('') | lower) and 'bad command' not in (mikrotik_result.stdout | default('') | lower) and 'syntax error' not in (mikrotik_result.stdout | default('') | lower)"
+      community.routeros.command:
+        commands: "{{ config_cli }}"
+      when: ansible_network_os == "community.routeros.routeros"
+      register: mikrotik_result  
 
+      failed_when: 
+        - mikrotik_result.failed == true or
+          "bad command" in (mikrotik_result | string | lower) or
+          "syntax error" in (mikrotik_result | string | lower) or
+          "expected end" in (mikrotik_result | string | lower) or
+          "input does not match" in (mikrotik_result | string | lower) or
+          "no such item" in (mikrotik_result | string | lower)
+          
     - name: Apply config to Huawei
       ansible.netcommon.cli_command:
         command: "{{ item }}"
