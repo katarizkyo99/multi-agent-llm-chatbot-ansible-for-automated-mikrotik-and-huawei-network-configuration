@@ -6,13 +6,11 @@
     - name: Apply config to Mikrotik RouterOs
       ansible.netcommon.cli_command:
         command: "{{ item }}"
-      # Kita pecah kembali string " ; " dari Python menjadi baris per baris untuk di-loop
       loop: "{{ config_cli.split(' ; ') }}"
       when: ansible_network_os == "community.routeros.routeros" and item | trim != ''
       register: mikrotik_result  
       ignore_errors: yes
 
-      # Karena pakai loop, kita cukup cek 'stdout' dari masing-masing perintah yang sedang berjalan
       failed_when: >
         'bad command' in (mikrotik_result.stdout | default('') | lower) or
         'syntax error' in (mikrotik_result.stdout | default('') | lower) or
@@ -28,12 +26,24 @@
         'no such item' not in (mikrotik_result.stdout | default('') | lower)
           
     - name: Apply config to Huawei
-      ansible.netcommon.cli_command:
-        command: "{{ item }}"
-      loop: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
-      when: ansible_network_os == 'community.network.ce' and item | trim != ''
+      community.network.ce_command:
+        # Kirim semua baris perintah sekaligus dalam bentuk list (tanpa loop!)
+        commands: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
+      when: ansible_network_os == 'community.network.ce' and config_cli | trim != ''
       register: huawei_result
       ignore_errors: yes
+      
+      # Filter Cerdas: Deteksi Error (Merah)
+      failed_when: >
+        huawei_result.failed == true or
+        "Error:" in (huawei_result.stdout | join(' ') | string) or
+        "Unrecognized" in (huawei_result.stdout | join(' ') | string)
+        
+      # Filter Cerdas: Deteksi Berubah (Kuning)
+      changed_when: >
+        huawei_result.failed == false and
+        "Error:" not in (huawei_result.stdout | join(' ') | string) and
+        "Unrecognized" not in (huawei_result.stdout | join(' ') | string)
       
     - name: "Tampilkan Hasil Eksekusi Perangkat"
       debug:
@@ -41,4 +51,5 @@
           - "=== OUTPUT MIKROTIK ==="
           - "{{ mikrotik_result.results | default([]) | map(attribute='stdout') | list | default('N/A') }}"
           - "=== OUTPUT HUAWEI ==="
-          - "{{ huawei_result.results | map(attribute='stdout') | list | default('N/A') }}"
+          - "{{ huawei_result.stdout | default('N/A') }}"
+
