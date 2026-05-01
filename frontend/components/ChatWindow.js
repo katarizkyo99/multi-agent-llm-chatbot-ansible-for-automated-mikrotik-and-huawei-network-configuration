@@ -171,17 +171,20 @@ export default function ChatWindow({
 
     return (
         <>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4">
-                {activeChat.messages.map((m, i) => (
-                    <MessageBubble key={m.id || i} message={m} BASE_URL={BASE_URL} />
-                ))}
-                {isThinking && (
-                    <div className="flex justify-start">
-                        <div className="mx-4 my-2 px-4 py-2 bg-gray-200 text-gray-500 rounded-2xl animate-pulse">
-                            Memproses...
+
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+                <div className="max-w-3xl mx-auto w-full flex flex-col space-y-4">
+                    {activeChat.messages.map((m, i) => (
+                        <MessageBubble key={m.id || i} message={m} BASE_URL={BASE_URL} />
+                    ))}
+                    {isThinking && (
+                        <div className="flex justify-start">
+                            <div className="mx-4 my-2 px-4 py-2 bg-gray-200 text-gray-500 rounded-2xl animate-pulse">
+                                Memproses...
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             <div className="pb-5 px-5 w-full max-w-3xl mx-auto">
