@@ -1,3 +1,4 @@
+---
 - name: Apply config to network device
   hosts: all
   gather_facts: no
