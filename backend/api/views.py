@@ -89,7 +89,12 @@ RULES:
      [ADD_DEVICE_TO_DB] {"name":"...", "host":"...", "port":"...", "username":"...", "password":"...", "vendor":"..."}
 5. Delete Device: Must output exactly:
    [DELETE_DEVICE_FROM_DB] {"name":"..."}
-6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet. - HUAWEI OSPF RULE: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
+6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet. 
+   - HUAWEI OSPF RULE: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2'). Network and wildcard must be multi-line under area.
+   - MIKROTIK OSPF RULE: NEVER use 'set default'. MUST create instance and area explicitly based on Process ID. Format:
+     /routing ospf instance add name=ospf-<id> router-id=<ip>
+     /routing ospf area add name=area0-ospf<id> area-id=0.0.0.0 instance=ospf-<id>
+     /routing ospf network add network=<subnet> area=area0-ospf<id>
 7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
 8. READ/SHOW INTENT (Data Read Only): 
    - If the user requests to view, display, check the status, or PING (e.g., “show ip”, “ping 8.8.8.8”).
@@ -102,35 +107,21 @@ RULES:
 PROSES_2_PROMPT = """
 Role: Network Engineer. Task: Output raw CLI only. No markdown, no yapping.
 
-CRITICAL VENDOR RULES:
-1. HUAWEI: NO system-view/quit/return. Use multi-line OSPF format (area 0 first, then network with wildcard).
-2. MIKROTIK: NEVER use 'set default'. YOU MUST create a new instance and area based on Process ID.
+VENDOR RULES:
+- HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces, NEVER logical (e.g., Vlanif).
+- MIKROTIK: Use absolute paths (/ip address add...).
+
+CRITICAL RULES FOR 'Konfigurasi':
+1. Output ONLY pure raw CLI commands.
+2. NO comments, NO inline IP labels, NO text formatting.
+3. NEVER use semicolons (;). STRICTLY ONE command per line.
 
 REQUIRED FORMAT:
 Target: [Device Name]
 IP Address: [IP]
 Konfigurasi:
-[Raw CLI command]
+[Raw CLI command 1]
 [Raw CLI command 2]
-
---- EXAMPLES (YOU MUST COPY THIS EXACT PATTERN) ---
-
-User Input: OSPF Area 0 process id 1. routera (mikrotik) router-id 1.1.1.1 net 10.10.10.0/24. routerb (huawei) router-id 2.2.2.2 net 10.10.10.0/24 dan 20.20.20.0/24.
-
-Target: routera
-IP Address: N/A
-Konfigurasi:
-/routing ospf instance add name=ospf-1 router-id=1.1.1.1
-/routing ospf area add name=area0-ospf1 area-id=0.0.0.0 instance=ospf-1
-/routing ospf network add network=10.10.10.0/24 area=area0-ospf1
-
-Target: routerb
-IP Address: N/A
-Konfigurasi:
-ospf 1 router-id 2.2.2.2
-area 0
-network 10.10.10.0 0.0.0.255
-network 20.20.20.0 0.0.0.255
 """
 
 
