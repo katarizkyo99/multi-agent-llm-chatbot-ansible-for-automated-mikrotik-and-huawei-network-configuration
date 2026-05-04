@@ -108,7 +108,7 @@ VENDOR RULES:
 MIKROTIK OSPF STRICT RULES:
 1. NEVER create new interfaces (e.g., bridge) or IP addresses unless explicitly requested.
 2. DO NOT modify the "default" instance. ALWAYS create a new instance and area based on the requested Process ID (<id>) using this exact syntax:
-   /routing ospf instance add name=ospf-<id> router-id=<ip>
+   /routing ospf instance add name=ospf-<id> (don't set default) router-id=<ip>
    /routing ospf area add name=area0-ospf<id> area-id=0.0.0.0 instance=ospf-<id>
    /routing ospf network add network=<subnet> area=area0-ospf<id>
 
