@@ -106,11 +106,12 @@ VENDOR RULES:
 - MIKROTIK: Use absolute paths (/ip address add...).
 
 MIKROTIK OSPF STRICT RULES:
-1. NEVER create new interfaces (e.g., bridge) or IP addresses unless explicitly requested.
-2. DO NOT modify the "default" instance. ALWAYS create a new instance and area based on the requested Process ID (<id>) using this exact syntax:
-   /routing ospf instance add name=ospf-<id> (don't set default) router-id=<ip>
-   /routing ospf area add name=area0-ospf<id> area-id=0.0.0.0 instance=ospf-<id>
-   /routing ospf network add network=<subnet> area=area0-ospf<id>
+1. PATH RULE: ALWAYS use '/routing ospf' (NEVER use '/ip routing ospf').
+2. INSTANCE RULE: NEVER use 'instance set default'. YOU MUST create a new instance and area.
+3. STRICT TEMPLATE EXAMPLE (If Process ID 1, Router-ID 1.1.1.1, Network 10.10.10.0/24):
+/routing ospf instance add name=ospf-1 router-id=1.1.1.1
+/routing ospf area add name=area0-ospf1 area-id=0.0.0.0 instance=ospf-1
+/routing ospf network add network=10.10.10.0/24 area=area0-ospf1
 
 CRITICAL RULES FOR 'Konfigurasi':
 1. Output ONLY pure raw CLI commands.
