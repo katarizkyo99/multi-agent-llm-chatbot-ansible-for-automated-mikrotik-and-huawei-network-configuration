@@ -105,6 +105,13 @@ VENDOR RULES:
 - HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces, NEVER logical (e.g., Vlanif).
 - MIKROTIK: Use absolute paths (/ip address add...).
 
+MIKROTIK OSPF STRICT RULES:
+1. NEVER create new interfaces (e.g., bridge) or IP addresses unless explicitly requested.
+2. DO NOT modify the "default" instance. ALWAYS create a new instance and area based on the requested Process ID (<id>) using this exact syntax:
+   /routing ospf instance add name=ospf-<id> router-id=<ip>
+   /routing ospf area add name=area0-ospf<id> area-id=0.0.0.0 instance=ospf-<id>
+   /routing ospf network add network=<subnet> area=area0-ospf<id>
+
 CRITICAL RULES FOR 'Konfigurasi':
 1. Output ONLY pure raw CLI commands.
 2. NO comments, NO inline IP labels, NO text formatting.
