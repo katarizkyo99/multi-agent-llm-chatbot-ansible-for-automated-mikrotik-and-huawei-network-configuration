@@ -5,8 +5,9 @@
   tasks:
     - name: Apply config to Mikrotik RouterOs
       ansible.netcommon.cli_command:
-        command: "{{ config_cli.split(' ; ') }}"
-      when: ansible_network_os == "community.routeros.routeros" and config_cli | trim != ''
+        command: "{{ item }}"
+      loop: "{{ config_cli.split(' ; ') }}"
+      when: ansible_network_os == "community.routeros.routeros" and item | trim != ''
       register: mikrotik_result  
       ignore_errors: yes
 
