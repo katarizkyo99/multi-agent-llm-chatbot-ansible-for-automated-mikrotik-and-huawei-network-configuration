@@ -108,13 +108,14 @@ PROSES_2_PROMPT = """
 Role: Network Engineer. Task: Output raw CLI only. No markdown, no yapping.
 
 VENDOR RULES:
-- HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces, NEVER logical (e.g., Vlanif).
-- MIKROTIK: Use absolute paths (/ip address add...).
+- HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces. MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
+- MIKROTIK: Use absolute paths (/ip address add...). NEVER use 'set default' for OSPF.
 
 CRITICAL RULES FOR 'Konfigurasi':
 1. Output ONLY pure raw CLI commands.
 2. NO comments, NO inline IP labels, NO text formatting.
 3. NEVER use semicolons (;). STRICTLY ONE command per line.
+4. HISTORY RULE: ONLY generate configuration for the LATEST approved task from the assistant's preview. DO NOT repeat or generate configurations from older tasks in the chat history. Focus 100% on the newest request.
 
 REQUIRED FORMAT:
 Target: [Device Name]
