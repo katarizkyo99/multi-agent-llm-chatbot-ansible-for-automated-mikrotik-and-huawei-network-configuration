@@ -6,7 +6,8 @@
   tasks:
     - name: Apply config to Mikrotik RouterOs
       community.routeros.command:
-        commands: "{{ config_cli.split(';')"
+        # INI BARIS YANG TADI KURANG KURUNG KURAWALNYA YA MAS:
+        commands: "{{ config_cli.split(';') | reject('match', '^\\s*$') | list }}"
       when: ansible_network_os == "community.routeros.routeros" and config_cli | trim != ''
       register: mikrotik_result  
       ignore_errors: yes
@@ -27,7 +28,7 @@
           
     - name: Apply config to Huawei
       community.network.ce_command:
-        commands: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
+        commands: "{{ ['system-view'] + config_cli.split('\n') | reject('match', '^\\s*$') | list + ['return'] }}"
       when: ansible_network_os == 'community.network.ce' and config_cli | trim != ''
       register: huawei_result
       ignore_errors: yes
