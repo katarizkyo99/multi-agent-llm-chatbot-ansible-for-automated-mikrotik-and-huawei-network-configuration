@@ -791,14 +791,17 @@ def execute_config(request):
                 elif "timed out" in combined_log or "timeout" in combined_log:
                     feedback_msg = f"Gagal: Koneksi ke {final_target_name} terputus (Timeout). Perangkat tidak merespons atau tidak dapat dijangkau."
                     status_flag = "error"
+                elif any(x in combined_log for x in ["authentication failed", "permission denied", "auth failed", "login failed"]):
+                    feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Silakan cek Username dan Password di database."
+                    status_flag = "error"
                 elif "authentication failed" in combined_log:
                     feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
                     status_flag = "error"
                 elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
                     detail_error = reason if reason else "IP Address sudah terpasang di interface lain."
-                    feedback_msg = f"⚠️ Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {detail_error}"
+                    feedback_msg = f"Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {detail_error}"
                     status_flag = "error"
-                elif "unrecognized command" in combined_log or "bad command" in combined_log or "syntax error" in combined_log or "input does not match" in combined_log:
+                elif any(x in combined_log for x in ["unrecognized command", "bad command", "syntax error", "input does not match"]):
                     feedback_msg = f"Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
                     status_flag = "error"
                 elif "failed=" in stdout_text_lower and not "failed=0" in stdout_text_lower:
