@@ -770,23 +770,26 @@ def execute_config(request):
                 if match_huawei:
                     cmd = match_huawei.group(1).strip()
                     err_msg = match_huawei.group(2).replace('\\r\\n', ' ').replace('\\n', ' ').strip()
-                    reason = f"\n💡 Detail: Perintah `{cmd}` ditolak -> {err_msg}"
+                    reason = f"\n Detail: Perintah `{cmd}` ditolak -> {err_msg}"
                 else:
                     match_mikrotik = re.search(r'"stdout":\s*"([^"]+)"', raw_stdout)
                     if match_mikrotik:
                         err_msg = match_mikrotik.group(1).replace('\\n', ' ').replace('\\r', '').strip()
                         if err_msg.startswith("/ "): err_msg = err_msg[2:]
-                        reason = f"\n💡 Detail: {err_msg}"
+                        reason = f"\n Detail: {err_msg}"
                     else:
                         match_generic = re.search(r'(?i)error:\s*(.*)', raw_stdout)
                         if match_generic:
-                            reason = f"\n💡 Detail: {match_generic.group(1).strip()}"
+                            reason = f"\n Detail: {match_generic.group(1).strip()}"
 
                 # ----------------------------------------------------------
                 # Penentuan Status Berdasarkan Log
                 # ----------------------------------------------------------
                 if "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
                     feedback_msg = f"Gagal: Tidak dapat menghubungi {final_target_name} (Timeout/Unreachable). Pastikan IP dan Port benar."
+                    status_flag = "error"
+                elif "timed out" in combined_log or "timeout" in combined_log:
+                    feedback_msg = f"Gagal: Koneksi ke {final_target_name} terputus (Timeout). Perangkat tidak merespons atau tidak dapat dijangkau."
                     status_flag = "error"
                 elif "authentication failed" in combined_log:
                     feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
@@ -817,7 +820,7 @@ def execute_config(request):
                 final_results.append({
                     "target": final_target_name, 
                     "status": "exception", 
-                    "feedback": f"❌ Error Sistem: Gagal mengeksekusi subprocess. ({str(e)})", 
+                    "feedback": f"Error Sistem: Gagal mengeksekusi subprocess. ({str(e)})", 
                     "error": str(e)
                 })
 
