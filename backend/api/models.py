@@ -28,13 +28,8 @@ class Message(models.Model):
         return f"{self.role}: {self.content[:30] if self.content else '[image]'}"
 
 class RiwayatKonfigurasi(models.Model):
-    STATUS_CHOICES = (
-        ("Disetujui", "Disetujui"),
-        ("Ditolak", "Ditolak"),
-    )
-
     config = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    status = models.TextField()
     image = models.ImageField(upload_to="riwayat_images/", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
