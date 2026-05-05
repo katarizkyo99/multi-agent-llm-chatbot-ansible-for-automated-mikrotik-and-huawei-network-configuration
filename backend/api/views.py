@@ -108,6 +108,7 @@ RULES:
    - IMMEDIATELY output exactly as follows: `[READ_DEVICE] device_name, vendor-specific_native_command`
    - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4`
    - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8`
+9. STRICT DATA MATCHING: Use EXACT IPs, subnets, VLANs, and interface names from user text/image. NEVER invent placeholder IPs. Map VLANs to the correct physical ports exactly as shown.
 """
 
 PROSES_2_PROMPT = """
