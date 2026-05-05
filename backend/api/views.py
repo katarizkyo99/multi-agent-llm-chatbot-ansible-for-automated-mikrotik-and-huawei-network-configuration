@@ -69,13 +69,26 @@ def sanitize_mermaid(text):
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
+
+SHARED_VENDOR_RULES = """
+VENDOR RULES:
+- HUAWEI: 
+  1. NO 'system-view', 'quit', or 'return' (system handles this).
+  2. Use 'undo shutdown' to enable interfaces.
+  3. CRITICAL LIMITATION: NEVER use the 'portswitch' command unless the user explicitly asks to change a Layer 3 physical port to Layer 2. DO NOT randomly add 'portswitch' after 'undo shutdown' or on Vlanif interfaces!
+  4. OSPF: MUST write process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
+- MIKROTIK: 
+  1. Use absolute paths (e.g., '/ip address add...').
+  2. NEVER use 'set default' for OSPF. Explicitly create instance and area.
+"""
+
 PROSES_1_PROMPT = """
 Role: Network Architect. Speak friendly Indonesian.
 Task: Analyze intent, generate topology, trigger actions.
 
 DB_DEVICES: {device_context}
 (NEVER list devices unless explicitly asked).
-
+""" + SHARED_VENDOR_RULES + """
 RULES:
 1. Short answers only.
 2. If asked to list devices, use Markdown table (Name, IP, Vendor).
@@ -90,32 +103,21 @@ RULES:
 5. Delete Device: Must output exactly:
    [DELETE_DEVICE_FROM_DB] {"name":"..."}
 6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet. 
-   - HUAWEI OSPF RULE: MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2'). Network and wildcard must be multi-line under area.
-   - MIKROTIK OSPF RULE: NEVER use 'set default'. MUST create instance and area explicitly based on Process ID. Format:
-     /routing ospf instance add name=ospf-<id> router-id=<ip>
-     /routing ospf area add name=area0-ospf<id> area-id=0.0.0.0 instance=ospf-<id>
-     /routing ospf network add network=<subnet> area=area0-ospf<id>
 7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
 8. READ/SHOW INTENT (Data Read Only): 
-   - If the user requests to view, display, check the status, or PING (e.g., “show ip”, “ping 8.8.8.8”).
-   - DO NOT display the Markdown block. DO NOT ask “Execute this now?”. 
    - IMMEDIATELY output exactly as follows: `[READ_DEVICE] device_name, vendor-specific_native_command`
-   - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4` (PING MUST ALWAYS INCLUDE count=4)
-   - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8` (PING MUST ALWAYS INCLUDE -c 4)
+   - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4`
+   - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8`
 """
 
 PROSES_2_PROMPT = """
 Role: Network Engineer. Task: Output raw CLI only. No markdown, no yapping.
-
-VENDOR RULES:
-- HUAWEI: NO system-view/quit/return. Use 'undo shutdown'. 'portswitch' ONLY on physical interfaces. MUST write OSPF process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
-- MIKROTIK: Use absolute paths (/ip address add...). NEVER use 'set default' for OSPF.
-
+""" + SHARED_VENDOR_RULES + """
 CRITICAL RULES FOR 'Konfigurasi':
 1. Output ONLY pure raw CLI commands.
 2. NO comments, NO inline IP labels, NO text formatting.
 3. NEVER use semicolons (;). STRICTLY ONE command per line.
-4. HISTORY RULE: ONLY generate configuration for the LATEST approved task from the assistant's preview. DO NOT repeat or generate configurations from older tasks in the chat history. Focus 100% on the newest request.
+4. HISTORY RULE: ONLY generate configuration for the LATEST approved task from the assistant's preview. DO NOT repeat or generate configurations from older tasks.
 
 REQUIRED FORMAT:
 Target: [Device Name]
@@ -124,7 +126,6 @@ Konfigurasi:
 [Raw CLI command 1]
 [Raw CLI command 2]
 """
-
 
 # ==============================================================================
 # PIPELINE CHATBOT 
@@ -743,18 +744,76 @@ def execute_config(request):
                 if os.path.exists(vars_file_path):
                     os.remove(vars_file_path)
                     
-               # Merekam Hasil (success/error)
+                # ==========================================================
+                # Menerjemahkan Raw Log jadi Feedback User
+                # ==========================================================
+                stdout_text_lower = result.stdout.lower() if result.stdout else ""
+                stderr_text_lower = result.stderr.lower() if result.stderr else ""
+                combined_log = stdout_text_lower + stderr_text_lower
+
+                feedback_msg = f"✅ Konfigurasi berhasil diterapkan ke perangkat {final_target_name}!"
+                status_flag = "success"
+
+                # ----------------------------------------------------------
+                # Ekstrak Alasan Error dari Ansible
+                # ----------------------------------------------------------
+                reason = ""
+                raw_stdout = result.stdout if result.stdout else ""
+                
+                match_huawei = re.search(r"(?i)command:\s*([^,]+),\s*b'([^']+)'", raw_stdout)
+                if match_huawei:
+                    cmd = match_huawei.group(1).strip()
+                    err_msg = match_huawei.group(2).replace('\\r\\n', ' ').replace('\\n', ' ').strip()
+                    reason = f"\n💡 Detail: Perintah `{cmd}` ditolak -> {err_msg}"
+                else:
+                    match_mikrotik = re.search(r'"stdout":\s*"([^"]+)"', raw_stdout)
+                    if match_mikrotik:
+                        err_msg = match_mikrotik.group(1).replace('\\n', ' ').replace('\\r', '').strip()
+                        if err_msg.startswith("/ "): err_msg = err_msg[2:]
+                        reason = f"\n💡 Detail: {err_msg}"
+                    else:
+                        match_generic = re.search(r'(?i)error:\s*(.*)', raw_stdout)
+                        if match_generic:
+                            reason = f"\n💡 Detail: {match_generic.group(1).strip()}"
+
+                # ----------------------------------------------------------
+                # Penentuan Status Berdasarkan Log
+                # ----------------------------------------------------------
+                if "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
+                    feedback_msg = f"❌ Gagal: Tidak dapat menghubungi {final_target_name} (Timeout/Unreachable). Pastikan IP dan Port benar."
+                    status_flag = "error"
+                elif "authentication failed" in combined_log:
+                    feedback_msg = f"❌ Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
+                    status_flag = "error"
+                elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
+                    feedback_msg = f"⚠️ Gagal diterapkan: IP Address yang Anda masukkan sudah terpasang atau bentrok (conflict) di antarmuka {final_target_name}.{reason}"
+                    status_flag = "error"
+                elif "unrecognized command" in combined_log or "bad command" in combined_log or "syntax error" in combined_log or "input does not match" in combined_log:
+                    feedback_msg = f"⚠️ Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
+                    status_flag = "error"
+                elif "failed=" in stdout_text_lower and not "failed=0" in stdout_text_lower:
+                    feedback_msg = f"❌ Gagal: Terjadi kesalahan saat menerapkan konfigurasi pada {final_target_name}.{reason}"
+                    status_flag = "error"
+                elif "error:" in combined_log:
+                    feedback_msg = f"⚠️ Peringatan: Terdapat error pada eksekusi {final_target_name}.{reason}"
+                    status_flag = "error"
+
                 final_results.append({
                     "target": final_target_name,
-                    "status": "success" if result.returncode == 0 else "error",
+                    "status": status_flag,
+                    "feedback": feedback_msg,
                     "stdout": result.stdout,
                     "stderr": result.stderr
                 })
 
             except Exception as e:
                 print(f"Error executing task for {final_target_name}: {e}")
-                final_results.append({"target": final_target_name, "status": "exception", "error": str(e)})
-
+                final_results.append({
+                    "target": final_target_name, 
+                    "status": "exception", 
+                    "feedback": f"❌ Error Sistem: Gagal mengeksekusi subprocess. ({str(e)})", 
+                    "error": str(e)
+                })
 
         return Response({
             "message": f"Selesai memproses {len(tasks)} tugas.",
