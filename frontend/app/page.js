@@ -162,7 +162,6 @@ export default function Home() {
         } catch (e) { throw e; }
     };
 
-
     // Fungsi yang dijalankan ketika user menekan tombol "Setuju" pada Pop-up Konfigurasi
     const handleApproveConfig = async (editedConfig) => {
         if (!editedConfig) return;
@@ -172,42 +171,58 @@ export default function Home() {
 
         try {
             const execResult = await executeConfig(editedConfig);
-
-            // Memeriksa apakah user mengedit skrip LLM sebelum dieksekusi
-            const isConfigChanged = pendingConfig && (pendingConfig.trim() !== editedConfig.trim());
-            const editNotice = isConfigChanged ? `\n\nKonfigurasi diedit oleh pengguna:\n\n${editedConfig}\n` : "";
             
             if (execResult && execResult.results && execResult.results.length > 0) {
                 const firstResult = execResult.results[0];
+                
+                // MENGAMBIL FEEDBACK DARI BACKEND
+                outputMessage = firstResult.feedback || 
+                               (firstResult.status === 'success' 
+                                ? `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}`
+                                : `❌ Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}`);
+                
                 if (firstResult.status === 'success') {
                     executionSuccess = true;
-                    outputMessage = ` Konfigurasi berhasil diproses di perangkat ${firstResult.target}`;
-                    
-                } else {
-                    outputMessage = ` Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}\n\n`;
                 }
             } else {
-                outputMessage = " Eksekusi selesai tapi tidak ada respons detail.";
+                outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail dari server.";
             }
 
-            // Menyimpan log riwayat ke database
+            // Menyimpan ke database
             await safeFetchJson(`${BASE_URL}/api/riwayat-konfigurasi/add/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ config: editedConfig, status: executionSuccess ? "Berhasil" : "Gagal" }),
+                // Menyimpan pesan feedback lengkap ke riwayat
+                body: JSON.stringify({ 
+                    config: editedConfig, 
+                    status: outputMessage 
+                }),
             });
 
-            // Menyimpan balasan sistem (sukses/gagal beserta log terminal) ke riwayat chat
+            // Simpan ke riwayat chat agar muncul di ChatWindow
             await safeFetchJson(`${BASE_URL}/api/chats/messages/save/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ chat_id: activeChatId, role: "assistant", content: outputMessage }),
+                body: JSON.stringify({ 
+                    chat_id: activeChatId, 
+                    role: "assistant", 
+                    content: outputMessage 
+                }),
             });
 
-            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: outputMessage }] } : c));
+            setChats((prev) => prev.map((c) => 
+                c.id === activeChatId 
+                ? { ...c, messages: [...(c.messages || []), { role: "bot", text: outputMessage }] } 
+                : c
+            ));
+
         } catch (error) {
-            const errorMsg = ` Terjadi kesalahan sistem saat memproses: ${error.message}`;
-            setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] } : c));
+            const errorMsg = `❌ Terjadi kesalahan sistem saat memproses: ${error.message}`;
+            setChats((prev) => prev.map((c) => 
+                c.id === activeChatId 
+                ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] } 
+                : c
+            ));
         } finally {
             setPendingConfig(null);
             fetchConfigHistory();
