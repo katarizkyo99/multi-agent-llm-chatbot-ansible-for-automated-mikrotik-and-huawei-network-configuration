@@ -795,7 +795,8 @@ def execute_config(request):
                     feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
                     status_flag = "error"
                 elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
-                    feedback_msg = f"Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {reason.replace('💡 Detail: ', '')}"
+                    detail_error = reason if reason else "IP Address sudah terpasang di interface lain."
+                    feedback_msg = f"⚠️ Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {detail_error}"
                     status_flag = "error"
                 elif "unrecognized command" in combined_log or "bad command" in combined_log or "syntax error" in combined_log or "input does not match" in combined_log:
                     feedback_msg = f"Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
