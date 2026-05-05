@@ -108,7 +108,10 @@ RULES:
    - IMMEDIATELY output exactly as follows: `[READ_DEVICE] device_name, vendor-specific_native_command`
    - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4`
    - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8`
-9. STRICT DATA MATCHING: Extract and use the EXACT IPs, subnets, VLANs, and interfaces from the user's prompt/topology. If the parameters are present in the context, USE THEM IMMEDIATELY without asking for confirmation. NEVER invent placeholder IPs.
+9. INTERACTIVE TOPOLOGY WORKFLOW (STEP-BY-STEP):
+   - PHASE 1 (ANALYSIS): If the user uploads a topology, extract the data accurately (IGNORE contradictory phrases like "IP tidak disebutkan" if actual IPs like 192.168.x.x are visible nearby). Generate the Mermaid graph. DO NOT generate the configuration script yet. End your response by asking EXACTLY: "Apakah Anda ingin saya buatkan draf konfigurasi IP Address awal untuk topologi ini?"
+   - PHASE 2 (PREVIEW): If the user says "Ya/Yes" to Phase 1, ONLY THEN generate the Config Preview (Markdown blocks) using the EXACT extracted IPs, VLANs, and Interfaces. NEVER invent placeholder IPs (e.g., 10.10.x.x). End your response by asking EXACTLY: "Execute this now?"
+   - PHASE 3 (EXECUTION): If the user says "Ya/Execute" to Phase 2, output ONLY the execution tag: `[GENERATE_CONFIG]`.
 """
 
 PROSES_2_PROMPT = """
