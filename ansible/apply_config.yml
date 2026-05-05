@@ -12,6 +12,7 @@
       ignore_errors: yes
 
       failed_when: >
+        mikrotik_result.failed == true or
         'bad command' in (mikrotik_result.stdout | default('') | lower) or
         'syntax error' in (mikrotik_result.stdout | default('') | lower) or
         'expected end' in (mikrotik_result.stdout | default('') | lower) or
@@ -19,6 +20,7 @@
         'no such item' in (mikrotik_result.stdout | default('') | lower)
 
       changed_when: >
+        mikrotik_result.failed == false and
         'bad command' not in (mikrotik_result.stdout | default('') | lower) and
         'syntax error' not in (mikrotik_result.stdout | default('') | lower) and
         'expected end' not in (mikrotik_result.stdout | default('') | lower) and
