@@ -791,8 +791,8 @@ def execute_config(request):
                 elif "timed out" in combined_log or "timeout" in combined_log:
                     feedback_msg = f"Gagal: Koneksi ke {final_target_name} terputus (Timeout). Perangkat tidak merespons atau tidak dapat dijangkau."
                     status_flag = "error"
-                elif any(x in combined_log for x in ["authentication failed", "permission denied", "auth failed", "login failed"]):
-                    feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Silakan cek Username dan Password di database."
+                elif any(x in combined_log for x in ["authentication failed", "permission denied", "auth failed", "login failed", "unable to decode json"]):
+                    feedback_msg = f"❌ Gagal: Autentikasi ditolak atau sesi SSH diputus oleh {final_target_name}. Silakan cek Username dan Password di database."
                     status_flag = "error"
                 elif "authentication failed" in combined_log:
                     feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
