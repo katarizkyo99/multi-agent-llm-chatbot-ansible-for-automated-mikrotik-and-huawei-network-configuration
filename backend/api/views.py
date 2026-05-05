@@ -780,22 +780,22 @@ def execute_config(request):
                 # Penentuan Status Berdasarkan Log
                 # ----------------------------------------------------------
                 if "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
-                    feedback_msg = f"❌ Gagal: Tidak dapat menghubungi {final_target_name} (Timeout/Unreachable). Pastikan IP dan Port benar."
+                    feedback_msg = f"Gagal: Tidak dapat menghubungi {final_target_name} (Timeout/Unreachable). Pastikan IP dan Port benar."
                     status_flag = "error"
                 elif "authentication failed" in combined_log:
-                    feedback_msg = f"❌ Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
+                    feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
                     status_flag = "error"
                 elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
-                    feedback_msg = f"⚠️ Gagal diterapkan: IP Address yang Anda masukkan sudah terpasang atau bentrok (conflict) di antarmuka {final_target_name}.{reason}"
+                    feedback_msg = f"Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {reason.replace('💡 Detail: ', '')}"
                     status_flag = "error"
                 elif "unrecognized command" in combined_log or "bad command" in combined_log or "syntax error" in combined_log or "input does not match" in combined_log:
-                    feedback_msg = f"⚠️ Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
+                    feedback_msg = f"Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
                     status_flag = "error"
                 elif "failed=" in stdout_text_lower and not "failed=0" in stdout_text_lower:
-                    feedback_msg = f"❌ Gagal: Terjadi kesalahan saat menerapkan konfigurasi pada {final_target_name}.{reason}"
+                    feedback_msg = f"Gagal: Terjadi kesalahan saat menerapkan konfigurasi pada {final_target_name}.{reason}"
                     status_flag = "error"
                 elif "error:" in combined_log:
-                    feedback_msg = f"⚠️ Peringatan: Terdapat error pada eksekusi {final_target_name}.{reason}"
+                    feedback_msg = f"Peringatan: Terdapat error pada eksekusi {final_target_name}.{reason}"
                     status_flag = "error"
 
                 final_results.append({
