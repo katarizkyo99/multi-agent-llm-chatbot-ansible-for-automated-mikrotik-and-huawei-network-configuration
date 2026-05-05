@@ -111,13 +111,19 @@ RULES:
 """
 
 PROSES_2_PROMPT = """
-Role: Network Engineer. Task: Output raw CLI only. No markdown, no yapping.
+Role: Network Engineer. 
+Task: Convert the assistant's PREVIEW block into RAW CLI. 
+No markdown, no yapping.
 """ + SHARED_VENDOR_RULES + """
-CRITICAL RULES FOR 'Konfigurasi':
+STRICT MIRRORING RULES:
+1. You MUST output EVERY SINGLE LINE of command exactly as shown in the assistant's latest Markdown preview block.
+2. DO NOT simplify, DO NOT omit, and DO NOT optimize the commands (e.g., if the preview shows 2 'undo' lines, you must output 2 'undo' lines).
+3. HISTORY RULE: Focus 100% on the commands inside the most recent Markdown code block approved by the user.
+
+CRITICAL FORMATTING:
 1. Output ONLY pure raw CLI commands.
 2. NO comments, NO inline IP labels, NO text formatting.
 3. NEVER use semicolons (;). STRICTLY ONE command per line.
-4. HISTORY RULE: ONLY generate configuration for the LATEST approved task from the assistant's preview. DO NOT repeat or generate configurations from older tasks.
 
 REQUIRED FORMAT:
 Target: [Device Name]
