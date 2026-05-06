@@ -71,15 +71,11 @@ def sanitize_mermaid(text):
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
-# ==============================================================================
-# SYSTEM PROMPTS 
-# ==============================================================================
-
 SHARED_VENDOR_RULES = """
 [HUAWEI RULES]
 1. NO 'system-view', 'quit', 'return', or '!' (Cisco style).
 2. Interface up: 'undo shutdown'. NEVER use 'portswitch' unless explicitly asked.
-3. IP/VLANs: MUST create global VLAN first (e.g., `vlan 20`), then configure `interface Vlanif`. DO NOT touch physical ports unless asked.
+3. CONFIG SCOPE: To configure L3, use `interface Vlanif`. To configure L2 TRUNKS, you MUST configure physical ports (e.g., `interface GigabitEthernet...`, `port link-type trunk`, `port trunk allow-pass vlan`). TRUNKING IS FULLY ALLOWED ON HUAWEI.
 4. OSPF: Process & router-id on ONE line (`ospf 1 router-id 1.1.1.1`).
 5. OSPF Net: Inside 'area', use WILDCARD MASK (`0.0.0.3`). NO 'area X' suffix.
 
@@ -88,7 +84,7 @@ SHARED_VENDOR_RULES = """
 2. VLANs: Use `/interface vlan add`. NEVER `/ip vlan`.
 3. OSPF: Create instance & area explicitly. NO 'set default'.
 4. OSPF Net: Use `area=<name>`. NEVER use `area-id`. Area IDs use IP format (`0.0.0.0`).
-5. LAYER 2 BOUNDARY: NEVER generate bridge, switch, or trunk configurations. Assume creating `/interface vlan` already handles 802.1Q tagging.
+5. LAYER 2 BOUNDARY: NEVER generate bridge, switch, or trunk commands for Mikrotik. If asked to trunk a Mikrotik, politely decline ONLY the Mikrotik part.
 """
 
 PROSES_1_PROMPT = """
