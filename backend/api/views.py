@@ -34,21 +34,23 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
-
-# ==============================================================================
-# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
-# ==============================================================================
 def sanitize_mermaid(text):
     import re
-    
+    def fix_newlines(match):
+        inner = match.group(1).replace('\n', '<br>').replace('\\n', '<br>')
+        return f'[{inner}]'
+        
+    text = re.sub(r'\[(.*?)\]', fix_newlines, text, flags=re.DOTALL)
+
     cleaned_lines = []
     for line in text.split('\n'):
-        def clean_node(match):
-            node_id = match.group(1)
-            content = match.group(2).replace('"', '').replace("<br>", " ")
-            return f'{node_id}["{content}"]'
         
-        line = re.sub(r'([a-zA-Z0-9_]+)\[(.*?)\]', clean_node, line)
+        def clean_node(match):
+            node_id = match.group(1).strip()
+            content = match.group(2).replace('"', '').strip()
+            return f'{node_id}["{content}"]'
+
+        line = re.sub(r'([a-zA-Z0-9_]+)\s*\[(.*?)\]', clean_node, line)
         
         line = re.sub(r'-\.[^>]*>', '-->', line)
         line = re.sub(r'-{2,}>+', '-->', line)
@@ -56,7 +58,7 @@ def sanitize_mermaid(text):
         
         def clean_edge(match):
             arrow = "-->" 
-            label = match.group(2).replace('"', '').replace("(", "").replace(")", "").replace("<br>", " ").replace(">", "").replace("<", "").strip()
+            label = match.group(2).replace('"', '').replace("(", "").replace(")", "").replace(">", "").replace("<", "").strip()
             return f"{arrow}|{label}|"
             
         line = re.sub(r'(-->|---)\|([^|]+)\|', clean_edge, line)    
@@ -97,6 +99,7 @@ RULES:
    - Node format: `ID["Name"]` (Must use \\n).
    - Lines: `-->` or `---` (No labels preferred).
    - If label needed: ONE word only (e.g., `|G0/0|`). NO spaces, IPs, VLAN, or ().
+   - Use <br> in nodes for line breaks. NEVER use physical newlines (Enter) inside brackets.
 4. Add Device: Need name, host, port, username, password, vendor ('routeros', 'ce', or 'vrp').
    - If missing: Ask for it.
    - If complete, output exactly at end:
@@ -219,7 +222,7 @@ class ChatView(APIView):
 
               vision_messages = [
                   {"role": "user", "content": [
-                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[WRITE IN INDONESIAN: Explain in detail which device connects to which device via which interface. Include IPs and vendors]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nA[\"Name (Vendor)\\nIP\"] -->|Interface| B[\"Name (Vendor)\\nIP\"]\n```\nRULES:\n1. Node IDs MUST be single letters/words with NO SPACES (e.g., use A, B, R1, SW1).\n2. STRICT: You MUST use brackets [\"...\"] for nodes. NEVER use parentheses ().\n3. Use \\n in nodes for line breaks.\n4. Put interface names on edges (e.g., -->|G0/0|).\n5. ONLY ONE mermaid block. No yapping."},
+                      {"type": "text", "text": "Analyze this topology image. Output EXACTLY in this format:\n\n**Analisis:**\n[WRITE IN INDONESIAN: Explain in detail which device connects to which device via which interface. Include IPs and vendors]\n\n**Gambar Topologi:**\n```mermaid\ngraph TD\nA[\"Name (Vendor)<br>IP\"] -->|Interface| B[\"Name (Vendor)<br>IP\"]\n```\nRULES:\n1. Node IDs MUST be single letters/words with NO SPACES (e.g., use A, B, R1, SW1).\n2. STRICT: You MUST use brackets [\"...\"] for nodes. NEVER use parentheses ().\n3. Use <br> in nodes for line breaks. NEVER use physical newlines (Enter) inside brackets.\n4. Put interface names on edges (e.g., -->|G0/0|).\n5. ONLY ONE mermaid block. No yapping."},
                       {"type": "image_url", "image_url": {"url": final_image_data}}
                   ]}
               ]
