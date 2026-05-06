@@ -80,6 +80,7 @@ VENDOR RULES:
   3. CRITICAL LIMITATION: NEVER use the 'portswitch' command unless the user explicitly asks to change a Layer 3 physical port to Layer 2. DO NOT randomly add 'portswitch' after 'undo shutdown' or on Vlanif interfaces!
   4. OSPF: MUST write process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
   5. STRICT CONFIG SCOPE: If the user asks to add IP addresses/VLANs, ONLY configure the Vlanif interfaces. NEVER configure physical ports (e.g., 'interface GigabitEthernet...', 'port link-type...') unless explicitly requested.
+  6. NO CISCO SYNTAX: NEVER use exclamation marks (`!`) as line separators.
 - MIKROTIK: 
   1. Use absolute paths (e.g., '/ip address add...').
   2. NEVER use 'set default' for OSPF. Explicitly create instance and area.
