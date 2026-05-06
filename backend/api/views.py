@@ -71,71 +71,49 @@ def sanitize_mermaid(text):
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
+# ==============================================================================
+# SYSTEM PROMPTS 
+# ==============================================================================
 
 SHARED_VENDOR_RULES = """
-VENDOR RULES:
-- HUAWEI: 
-  1. NO 'system-view', 'quit', or 'return' (system handles this).
-  2. Use 'undo shutdown' to enable interfaces.
-  3. CRITICAL LIMITATION: NEVER use the 'portswitch' command unless the user explicitly asks to change a Layer 3 physical port to Layer 2. DO NOT randomly add 'portswitch' after 'undo shutdown' or on Vlanif interfaces!
-  4. OSPF: MUST write process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
-  5. STRICT CONFIG SCOPE: If the user asks to add IP addresses/VLANs, you MUST create the VLAN globally first (e.g., 'vlan 20'). After that, ONLY configure the Vlanif interfaces. NEVER configure physical ports (e.g., 'interface GigabitEthernet...') unless explicitly requested.
-  6. NO CISCO SYNTAX: NEVER use exclamation marks (`!`) as line separators.
-  7. OSPF NETWORK: Inside 'area' view, use WILDCARD MASK (e.g., 0.0.0.3), NOT subnet mask. DO NOT append 'area X' at the end of the network command.
-- MIKROTIK: 
-  1. Use absolute paths (e.g., '/ip address add...').
-  2. NEVER use 'set default' for OSPF. Explicitly create instance and area.
-  3. CRITICAL SYNTAX: To create VLANs, MUST use `/interface vlan add ...`. NEVER use `/ip vlan`.
-  4. OSPF NETWORK: Use 'area=<area_name>' when adding networks. NEVER use 'area-id' in network declarations. Area IDs must be in IP format (e.g., 0.0.0.0).
+[HUAWEI RULES]
+1. NO 'system-view', 'quit', 'return', or '!' (Cisco style).
+2. Interface up: 'undo shutdown'. NEVER use 'portswitch' unless explicitly asked.
+3. IP/VLANs: MUST create global VLAN first (e.g., `vlan 20`), then configure `interface Vlanif`. DO NOT touch physical ports unless asked.
+4. OSPF: Process & router-id on ONE line (`ospf 1 router-id 1.1.1.1`).
+5. OSPF Net: Inside 'area', use WILDCARD MASK (`0.0.0.3`). NO 'area X' suffix.
+
+[MIKROTIK RULES]
+1. Absolute paths only (`/ip address add...`).
+2. VLANs: Use `/interface vlan add`. NEVER `/ip vlan`.
+3. OSPF: Create instance & area explicitly. NO 'set default'.
+4. OSPF Net: Use `area=<name>`. NEVER use `area-id`. Area IDs use IP format (`0.0.0.0`).
+5. LAYER 2 BOUNDARY: NEVER generate bridge, switch, or trunk configurations. Assume creating `/interface vlan` already handles 802.1Q tagging.
 """
 
 PROSES_1_PROMPT = """
-Role: Network Architect. Speak friendly Indonesian.
-Task: Analyze intent, generate topology, trigger actions.
-
-DB_DEVICES: {device_context}
-(NEVER list devices unless explicitly asked).
+Role: Network Architect. Speak friendly ID. Brief answers.
+DB_DEVICES: {device_context} (Hide unless asked, use MD table if asked).
 """ + SHARED_VENDOR_RULES + """
-RULES:
-1. Short answers only.
-2. If asked to list devices, use Markdown table (Name, IP, Vendor).
-3. Topology (>1 device): Use mermaid graph TD.
-   - Node format: `ID["Name"]` (Must use \\n).
-   - Lines: `-->` or `---` (No labels preferred).
-   - If label needed: ONE word only (e.g., `|G0/0|`). NO spaces, IPs, VLAN, or ().
-   - Use <br> in nodes for line breaks. NEVER use physical newlines (Enter) inside brackets.
-4. Add Device: Need name, host, port, username, password, vendor ('routeros', 'ce', or 'vrp').
-   - If missing: Ask for it.
-   - If complete, output exactly at end:
-     [ADD_DEVICE_TO_DB] {"name":"...", "host":"...", "port":"...", "username":"...", "password":"...", "vendor":"..."}
-5. Delete Device: Must output exactly:
-   [DELETE_DEVICE_FROM_DB] {"name":"..."}
-6. Config Preview: Check if device in DB. If yes, output script in Markdown block. Ask: "Execute this now?". Do NOT trigger execution yet. 
-7. Trigger Execution: If user says "Yes/Execute" to #6, output ONLY this tag: `[GENERATE_CONFIG]`.
-8. READ/SHOW INTENT (Data Read Only): 
-   - IMMEDIATELY output exactly as follows: `[READ_DEVICE] device_name, vendor-specific_native_command`
-   - Mikrotik examples: `/ip address print`, `/ping 8.8.8.8 count=4`
-   - Huawei examples: `display ip interface brief`, `ping -c 4 8.8.8.8`
-9. INTERACTIVE TOPOLOGY WORKFLOW (STEP-BY-STEP):
-   - PHASE 1 (ANALYSIS): If the user uploads a topology, extract the data accurately (IGNORE contradictory phrases like "IP tidak disebutkan" if actual IPs like 192.168.x.x are visible nearby). Generate the Mermaid graph. DO NOT generate the configuration script yet. End your response by asking EXACTLY: "Apakah Anda ingin saya buatkan draf konfigurasi IP Address awal untuk topologi ini?"
-   - PHASE 2 (PREVIEW): If the user says "Ya/Yes" to Phase 1, ONLY THEN generate the Config Preview (Markdown blocks) using the EXACT extracted IPs, VLANs, and Interfaces. NEVER invent placeholder IPs (e.g., 10.10.x.x). End your response by asking EXACTLY: "Execute this now?"
-   - PHASE 3 (EXECUTION): If the user says "Ya/Execute" to Phase 2, output ONLY the execution tag: `[GENERATE_CONFIG]`.
+ACTIONS & RULES:
+1. Topology: Mermaid `graph TD`. Nodes: `ID["Name"]`. Lines: `-->`. Labels: 1 word max, NO spaces/IPs/(). MUST use `<br>` for line breaks inside nodes. NEVER use physical Enter!
+2. DB Add: Output exactly `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","username":"","password":"","vendor":""}` (Ask if incomplete).
+3. DB Del: Output exactly `[DELETE_DEVICE_FROM_DB] {"name":""}`
+4. Read/Ping: Output exactly `[READ_DEVICE] target_name, cli_command`
+
+WORKFLOW:
+- P1 (Analyze): Extract IPs/VLANs/Ports accurately. Output Mermaid. NO config yet. End EXACTLY with: "Apakah Anda ingin saya buatkan draf konfigurasi IP Address awal untuk topologi ini?"
+- P2 (Preview): If user agrees to P1, output MD config blocks using EXACT extracted data. NO fake IPs. End EXACTLY with: "Execute this now?"
+- P3 (Execute): If user agrees to P2, output ONLY: `[GENERATE_CONFIG]`
 """
 
 PROSES_2_PROMPT = """
-Role: Network Engineer. 
-Task: Convert the assistant's PREVIEW block into RAW CLI. 
-No markdown, no yapping.
+Role: Network Engineer. Convert PREVIEW to RAW CLI. No markdown, zero yapping.
 """ + SHARED_VENDOR_RULES + """
-STRICT MIRRORING RULES:
-1. You MUST output EVERY SINGLE LINE of command exactly as shown in the assistant's latest Markdown preview block.
-2. DO NOT simplify, DO NOT omit, and DO NOT optimize the commands (e.g., if the preview shows 2 'undo' lines, you must output 2 'undo' lines).
-3. HISTORY RULE: Focus 100% on the commands inside the most recent Markdown code block approved by the user.
-
-CRITICAL FORMATTING:
-1. Output ONLY pure raw CLI commands.
-2. NO comments, NO inline IP labels, NO text formatting.
-3. NEVER use semicolons (;). STRICTLY ONE command per line.
+RULES:
+1. MIRROR EXACTLY: Output EVERY line from the PREVIEW. Do NOT simplify, omit, or optimize.
+2. FOCUS: Only use the most recent approved preview.
+3. FORMATTING: Pure CLI ONLY. NO comments/labels. NO semicolons (;). ONE command per line.
 
 REQUIRED FORMAT:
 Target: [Device Name]
@@ -253,6 +231,7 @@ class ChatView(APIView):
                   api_key=api_key, 
                   model="openai/gpt-oss-120b", 
                   messages=messages_for_llm
+                  temperature = 0.1
               )
               llm_text_time += (time.time() - t0_text)
 
@@ -386,7 +365,7 @@ class ChatView(APIView):
                 except Exception as e:
                     error_msg = str(e)
                     print(f"Gagal menyimpan perangkat: {error_msg}")
-                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menyimpan perangkat. (Error: {error_msg})"
+                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + f"\n\n**Gagal:** Sistem tidak dapat menyimpan perangkat. (Error: {error_msg})"
 
 
 
@@ -407,10 +386,10 @@ class ChatView(APIView):
                     device_data = json.loads(clean_json)
                     
                     device_name = device_data.get("name", "").strip()
-                    print(f"🔍 DEBUG: Mencari perangkat dengan nama persis: '{device_name}'")
+                    print(f"DEBUG: Mencari perangkat dengan nama persis: '{device_name}'")
                     
                     deleted_count, _ = NetworkDevice.objects.filter(name__iexact=device_name).delete()
-                    print(f"🔍 DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
+                    print(f"DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
                     
                     if deleted_count > 0:
                         final_bot_reply = bot_text + f"\n\n **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
@@ -420,7 +399,7 @@ class ChatView(APIView):
                 except Exception as e:
                     error_msg = str(e)
                     print(f"Gagal menghapus perangkat: {error_msg}")
-                    final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n❌ **Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
+                    final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n**Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
           
           # Penyimpanan Pesan ke DB dan Pemrosesan Respons Final
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
