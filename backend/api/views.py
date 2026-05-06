@@ -81,10 +81,12 @@ VENDOR RULES:
   4. OSPF: MUST write process and router-id in a SINGLE line (e.g., 'ospf 1 router-id 2.2.2.2').
   5. STRICT CONFIG SCOPE: If the user asks to add IP addresses/VLANs, you MUST create the VLAN globally first (e.g., 'vlan 20'). After that, ONLY configure the Vlanif interfaces. NEVER configure physical ports (e.g., 'interface GigabitEthernet...') unless explicitly requested.
   6. NO CISCO SYNTAX: NEVER use exclamation marks (`!`) as line separators.
+  7. OSPF NETWORK: Inside 'area' view, use WILDCARD MASK (e.g., 0.0.0.3), NOT subnet mask. DO NOT append 'area X' at the end of the network command.
 - MIKROTIK: 
   1. Use absolute paths (e.g., '/ip address add...').
   2. NEVER use 'set default' for OSPF. Explicitly create instance and area.
   3. CRITICAL SYNTAX: To create VLANs, MUST use `/interface vlan add ...`. NEVER use `/ip vlan`.
+  4. OSPF NETWORK: Use 'area=<area_name>' when adding networks. NEVER use 'area-id' in network declarations. Area IDs must be in IP format (e.g., 0.0.0.0).
 """
 
 PROSES_1_PROMPT = """
