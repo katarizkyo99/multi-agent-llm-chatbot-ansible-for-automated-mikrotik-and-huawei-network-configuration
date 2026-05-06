@@ -269,14 +269,26 @@ class ChatView(APIView):
           
           if "[GENERATE_CONFIG]" in proses_1_reply:
               print(" User Setuju. Proses 2 (Configurator) Mengambil Alih...")
+
+
+              last_preview = ""
+              for m in reversed(history):
+                  if m.role == "assistant" and "Execute this now?" in m.content:
+                      last_preview = m.content
+                      break
               
+              if not last_preview:
+                  for m in reversed(history):
+                      if m.role == "assistant":
+                          last_preview = m.content
+                          break
+
               messages_for_proses_2 = [
-                  {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}"}
+                  {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}\n\nCRITICAL OVERRIDE: You are a DUMB TEXT PARSER, not a network designer. DO NOT invent, add, or optimize any commands. DO NOT add 'undo shutdown', IPs, or bridge filters unless they are EXPLICITLY written in the preview."},
+                  {"role": "user", "content": f"Convert this EXACT preview block into the REQUIRED FORMAT (Target, IP, Konfigurasi):\n\n{last_preview}"}
               ]
-              for m in history:
-                  if m.content:
-                      messages_for_proses_2.append({"role": m.role, "content": m.content})
-                      
+              
+
               final_bot_reply = call_groq_llm(
                   api_key=api_key, 
                   model="llama-3.3-70b-versatile", 
