@@ -80,6 +80,7 @@ VENDOR RULES:
 - MIKROTIK: 
   1. Use absolute paths (e.g., '/ip address add...').
   2. NEVER use 'set default' for OSPF. Explicitly create instance and area.
+  3. CRITICAL SYNTAX: To create VLANs, MUST use `/interface vlan add ...`. NEVER use `/ip vlan`.
 """
 
 PROSES_1_PROMPT = """
