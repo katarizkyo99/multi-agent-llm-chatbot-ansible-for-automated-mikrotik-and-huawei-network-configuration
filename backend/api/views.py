@@ -190,7 +190,9 @@ class ChatView(APIView):
       device_context = "| Nama Perangkat | IP Address | Vendor |\n|---|---|---|\n"
       for d in devices:
           device_context += f"| {d.name} | {d.host} | {d.vendor} |\n"
-      formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
+
+      memori_topologi = f"\n\n[TOPOLOGI ROOM INI]:\n{chat.topology_data}\n(Use the IP and Interface data from the text above for configuration. DO NOT ask the user again.)" if chat.topology_data else ""
+      formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context) + memori_topologi
   
       # Mengambil 10 pesan terakhir untuk konteks LLM
       raw_history = Message.objects.filter(chat=chat).order_by("timestamp")
@@ -230,7 +232,9 @@ class ChatView(APIView):
               )
               
               llm_vision_time += (time.time() - t0_vision)
-
+              
+              chat.topology_data = proses_1_reply
+              chat.save()
           else:
               # Proses Teks
               print(" Proses 1 (Text Analyzer) Bekerja...")             
@@ -247,7 +251,12 @@ class ChatView(APIView):
           final_bot_reply = sanitize_mermaid(proses_1_reply)
             
           proses_1_reply = final_bot_reply
-  
+
+
+          if "```mermaid" in proses_1_reply or "Analisis:" in proses_1_reply:
+              chat.topology_data = proses_1_reply
+              chat.save()
+              print("Memori topologi berhasil dikunci untuk Room ini.")
           # =================================================================
           # ROUTING INTENT (Menjalankan Aksi Sesuai Tag dari Agen 1)
           # =================================================================
