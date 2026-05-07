@@ -72,6 +72,9 @@ def sanitize_mermaid(text):
 # SYSTEM PROMPTS 
 # ==============================================================================
 SHARED_VENDOR_RULES = """
+[GLOBAL RULES]
+- TOPOLOGY AWARENESS: ONLY configure IPs, VLANs, and routing networks that ACTUALLY belong to the specific target device based on the topology. Do NOT blindly apply all requested networks/IPs to all devices.
+
 [HUAWEI]
 - NO 'system-view','quit','return','!'.
 - Up port: 'undo shutdown'. NO 'portswitch'.
@@ -84,7 +87,7 @@ SHARED_VENDOR_RULES = """
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`. To delete, remove IP first, then remove vlan interface.
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
-- OSPF (ONLY IF REQUESTED): Explicit instance & area. Net: use `/routing ospf network add network=... area=...` (NEVER append 'instance=' in network command).
+- OSPF (ONLY IF REQUESTED): MUST explicitly ADD instance & area (`/routing ospf instance add name=ospf1...` & `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1`). STRICTLY NO 'set default'. Net: `/routing ospf network add network=... area=backbone` (NEVER append 'instance=' in network command).
 """
 
 PROSES_1_PROMPT = """
