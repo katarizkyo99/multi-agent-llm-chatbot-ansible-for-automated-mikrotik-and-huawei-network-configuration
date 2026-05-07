@@ -79,14 +79,14 @@ SHARED_VENDOR_RULES = """
 - NO 'system-view','quit','return','!'.
 - Up port: 'undo shutdown'. NO 'portswitch'.
 - VLAN: MUST create globally first (e.g., `vlan 10`).
-- LIMIT: DRAFT ONLY Identity, Global VLANs & IP (Vlanif). DO NOT configure physical ports (GigabitEthernet/link-type) UNLESS explicitly requested.
-- OSPF: 1-line (`ospf 1 router-id 1.1.1.1`). Net: WILDCARD mask (`0.0.0.3`), NO 'area X' suffix.
+- LIMIT: DRAFT ONLY Hostname (sysname), Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
+- OSPF (ONLY IF REQUESTED): 1-line (`ospf 1 router-id 1.1.1.1`). Net: WILDCARD mask. NO 'area X'.
 
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`.
-- OSPF: Explicit instance & area. NO 'set default'. Net: `area=<name>`.
-- LIMIT: NO L2 config (bridge/switch/trunk). Decline politely if asked.
+- LIMIT: DRAFT ONLY Hostname (/system identity set name=), VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
+- OSPF (ONLY IF REQUESTED): Explicit instance & area. NO 'set default'.
 """
 
 PROSES_1_PROMPT = """
@@ -101,7 +101,7 @@ ACTIONS:
 
 WORKFLOW:
 - P1 (Analyze): Extract data. Output Mermaid. NO CONFIG YET. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
-- P2 (Preview): Output MD config (Identity, Global VLAN, IP ONLY). STRICTLY NO physical port guessing. End EXACTLY: "Execute this now?"
+- P2 (Preview): Output MD config (Hostname, Global VLAN, IP ONLY). STRICTLY NO physical port guessing & NO OSPF unless asked. End EXACTLY: "Execute this now?"
 - P3 (Execute): If user agrees to P2, output ONLY: `[GENERATE_CONFIG]`
 """
 
