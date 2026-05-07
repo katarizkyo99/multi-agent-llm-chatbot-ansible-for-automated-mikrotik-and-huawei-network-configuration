@@ -101,7 +101,7 @@ ACTIONS:
 
 WORKFLOW:
 - P1 (Analyze): Extract data. Output Mermaid. NO CONFIG YET. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
-- P2 (Preview): Output MD config (Hostname, Global VLAN, IP ONLY). STRICTLY NO physical port guessing & NO OSPF unless asked. End EXACTLY: "Execute this now?"
+- P2 (Preview): Output MD config (DRAFT ONLY Global VLANs & IP. DO NOT configure physical ports UNLESS requested.). STRICTLY NO physical port guessing & NO OSPF unless asked. End EXACTLY: "Execute this now?"
 - P3 (Execute): If user agrees to P2, output ONLY: `[GENERATE_CONFIG]`
 """
 
