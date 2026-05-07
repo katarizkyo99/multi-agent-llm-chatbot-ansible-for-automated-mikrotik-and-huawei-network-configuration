@@ -761,8 +761,7 @@ def execute_config(request):
                 if os.path.exists(inventory_file):
                     os.remove(inventory_file)
                 if os.path.exists(vars_file_path):
-                    os.remove(vars_file_path)
-                    
+                    os.remove(vars_file_path)              
                 # ==========================================================
                 # Menerjemahkan Raw Log jadi Feedback User
                 # ==========================================================
@@ -770,34 +769,45 @@ def execute_config(request):
                 stderr_text_lower = result.stderr.lower() if result.stderr else ""
                 combined_log = stdout_text_lower + stderr_text_lower
 
-                feedback_msg = f"✅ Konfigurasi berhasil diterapkan ke perangkat {final_target_name}!"
-                status_flag = "success"
 
-                # ----------------------------------------------------------
-                # Ekstrak Alasan Error dari Ansible
-                # ----------------------------------------------------------
                 reason = ""
                 raw_stdout = result.stdout if result.stdout else ""
                 
                 match_huawei = re.search(r"(?i)command:\s*([^,]+),\s*b'([^']+)'", raw_stdout)
+                
+                match_mikrotik_item = re.search(r'failed:\s*\[.*?\]\s*\(item=(.*?)\)\s*=>\s*(\{.*?\})', raw_stdout, re.DOTALL)
+                
                 if match_huawei:
                     cmd = match_huawei.group(1).strip()
                     err_msg = match_huawei.group(2).replace('\\r\\n', ' ').replace('\\n', ' ').strip()
-                    reason = f"\n Detail: Perintah `{cmd}` ditolak -> {err_msg}"
-                else:
-                    match_mikrotik = re.search(r'"stdout":\s*"([^"]+)"', raw_stdout)
-                    if match_mikrotik:
-                        err_msg = match_mikrotik.group(1).replace('\\n', ' ').replace('\\r', '').strip()
+                    reason = f"\n\n**Detail Kegagalan:**\n- **Perintah Gagal:** `{cmd}`\n- **Pesan Sistem:** {err_msg}"
+                
+                elif match_mikrotik_item:
+                    cmd = match_mikrotik_item.group(1).strip()
+                    raw_json = match_mikrotik_item.group(2)
+                    
+                    err_msg = "Sintaks tidak valid atau ditolak oleh perangkat."
+                    stdout_match = re.search(r'"stdout":\s*"([^"]+)"', raw_json)
+                    if stdout_match:
+                        err_msg = stdout_match.group(1).replace('\\n', ' ').replace('\\r', '').strip()
                         if err_msg.startswith("/ "): err_msg = err_msg[2:]
-                        reason = f"\n Detail: {err_msg}"
-                    else:
-                        match_generic = re.search(r'(?i)error:\s*(.*)', raw_stdout)
-                        if match_generic:
-                            reason = f"\n Detail: {match_generic.group(1).strip()}"
+                        
+                    reason = f"\n\n**Detail Kegagalan:**\n- **Perintah Gagal:** `{cmd}`\n- **Pesan Sistem:** {err_msg}"
+                    
+                else:
+                    match_generic = re.search(r'(?i)error:\s*(.*)', raw_stdout)
+                    if match_generic:
+                        reason = f"\n\n**Detail Kegagalan:**\n- **Pesan Sistem:** {match_generic.group(1).strip()}"
 
-                # ----------------------------------------------------------
-                # Penentuan Status Berdasarkan Log
-                # ----------------------------------------------------------
+                feedback_msg = f"Konfigurasi berhasil diterapkan ke perangkat {final_target_name}!"
+                status_flag = "success"
+
+                syntax_errors = [
+                    "unrecognized command", "bad command", "syntax error", "input does not match",
+                    "expected end of command", "expected command name", "failure:", "invalid",
+                    "duplicate item name", "unknown error", "no such item", "incomplete command"
+                ]
+
                 if "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
                     feedback_msg = f"Gagal: Tidak dapat menghubungi {final_target_name} (Timeout/Unreachable). Pastikan IP dan Port benar."
                     status_flag = "error"
@@ -805,23 +815,26 @@ def execute_config(request):
                     feedback_msg = f"Gagal: Koneksi ke {final_target_name} terputus (Timeout). Perangkat tidak merespons atau tidak dapat dijangkau."
                     status_flag = "error"
                 elif any(x in combined_log for x in ["authentication failed", "permission denied", "auth failed", "login failed", "unable to decode json"]):
-                    feedback_msg = f"❌ Gagal: Autentikasi ditolak atau sesi SSH diputus oleh {final_target_name}. Silakan cek Username dan Password di database."
-                    status_flag = "error"
-                elif "authentication failed" in combined_log:
-                    feedback_msg = f"Gagal: Autentikasi ditolak oleh {final_target_name}. Cek username dan password."
+                    feedback_msg = f"Gagal: Autentikasi ditolak atau sesi SSH diputus oleh {final_target_name}. Silakan cek Username dan Password di database."
                     status_flag = "error"
                 elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
                     detail_error = reason if reason else "IP Address sudah terpasang di interface lain."
-                    feedback_msg = f"Konfigurasi berhasil diterapkan sebagian pada {final_target_name}.\n\nKonfigurasi yang gagal: {detail_error}"
+                    feedback_msg = f"Sebagian Gagal: Konfigurasi diterapkan, namun ada konflik pada {final_target_name}.\n\nDetail: {detail_error}"
+                    status_flag = "warning"
+                elif any(x in combined_log for x in syntax_errors):
+                    detail_error = reason if reason else ""
+                    feedback_msg = f"Sebagian Gagal: Terdapat sintaks perintah yang ditolak oleh {final_target_name}. {detail_error}"
                     status_flag = "error"
-                elif any(x in combined_log for x in ["unrecognized command", "bad command", "syntax error", "input does not match"]):
-                    feedback_msg = f"Sebagian gagal: Terdapat sintaks perintah yang tidak dikenali atau interface tidak ditemukan pada {final_target_name}.{reason}"
+                elif "ignored=" in stdout_text_lower and not "ignored=0" in stdout_text_lower:
+                    detail_error = reason if reason else ""
+                    feedback_msg = f"Sebagian Gagal: Terdapat perintah yang ditolak oleh {final_target_name} (Ignored by Ansible). {detail_error}"
                     status_flag = "error"
                 elif "failed=" in stdout_text_lower and not "failed=0" in stdout_text_lower:
-                    feedback_msg = f"Gagal: Terjadi kesalahan saat menerapkan konfigurasi pada {final_target_name}.{reason}"
+                    detail_error = reason if reason else ""
+                    feedback_msg = f"Gagal: Terjadi kesalahan fatal saat menerapkan konfigurasi pada {final_target_name}. {detail_error}"
                     status_flag = "error"
                 elif "error:" in combined_log:
-                    feedback_msg = f"Peringatan: Terdapat error pada eksekusi {final_target_name}.{reason}"
+                    feedback_msg = f"Gagal/Peringatan: Terdapat error pada eksekusi {final_target_name}. {reason}"
                     status_flag = "error"
 
                 final_results.append({
