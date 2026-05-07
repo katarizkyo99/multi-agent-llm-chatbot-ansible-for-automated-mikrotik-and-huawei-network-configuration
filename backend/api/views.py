@@ -75,13 +75,13 @@ SHARED_VENDOR_RULES = """
 [HUAWEI]
 - NO 'system-view','quit','return','!'.
 - Up port: 'undo shutdown'. NO 'portswitch'.
-- VLAN: MUST create globally first (e.g., `vlan 10`).
+- VLAN: MUST create globally first (e.g., `vlan 10`). To delete, MUST `undo interface Vlanif <id>` BEFORE `undo vlan <id>`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
 - OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
 
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
-- VLAN: `/interface vlan add`. NEVER `/ip vlan`.
+- VLAN: `/interface vlan add`. NEVER `/ip vlan`. To delete, remove IP first, then remove vlan interface.
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
 - OSPF (ONLY IF REQUESTED): Explicit instance & area. Net: use `/routing ospf network add network=... area=...` (NEVER append 'instance=' in network command).
 """
