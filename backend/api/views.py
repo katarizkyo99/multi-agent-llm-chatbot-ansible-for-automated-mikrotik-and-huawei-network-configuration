@@ -76,9 +76,10 @@ SHARED_VENDOR_RULES = """
 - TOPOLOGY AWARENESS: ONLY configure IPs, VLANs, and routing networks that ACTUALLY belong to the specific target device based on the topology. Do NOT blindly apply all requested networks/IPs to all devices.
 
 [HUAWEI]
-- NO 'system-view','quit','return','!'.
+- NO 'system-view','return','!'. (NOTE: `quit` IS ALLOWED and REQUIRED to exit interfaces).
 - Up port: 'undo shutdown'. NO 'portswitch'.
-- VLAN: MUST create globally first. To delete, MUST `undo interface Vlanif <id>` BEFORE `undo vlan <id>`.
+- CREATION: VLAN MUST be created globally first. 
+- DELETION: You CAN enter the interface to remove specific configs (e.g., `undo ip address`). BUT, you MUST output `quit` to return to global view BEFORE executing global commands like `undo interface Vlanif <id>` or `undo vlan <id>`.
 - TRUNK: To undo trunk, MUST `undo port trunk allow-pass vlan <id>` BEFORE `undo port link-type`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
 - OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
