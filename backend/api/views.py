@@ -86,6 +86,7 @@ SHARED_VENDOR_RULES = """
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`. To delete, remove IP first, then remove vlan interface.
+- DELETION: To delete, remove IP first, then remove vlan interface. MUST use inline find WITHOUT quotes around the command. Example: `/ip address remove [find address="1.1.1.1/24"]`. STRICTLY NEVER use `["find..."]`.
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
 - OSPF (ONLY IF REQUESTED): FORBIDDEN to use 'set default' or 'area=0'. YOU MUST USE THIS EXACT TEMPLATE: 1) `/routing ospf instance add name=ospf1 router-id=<ip>` 2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1` 3) `/routing ospf network add network=<net> area=backbone`
 """
