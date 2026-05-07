@@ -87,7 +87,7 @@ SHARED_VENDOR_RULES = """
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`. To delete, remove IP first, then remove vlan interface.
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
-- OSPF (ONLY IF REQUESTED): MUST explicitly ADD instance & area (`/routing ospf instance add name=ospf1...` & `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1`). STRICTLY NO 'set default'. Net: `/routing ospf network add network=... area=backbone` (NEVER append 'instance=' in network command).
+- OSPF (ONLY IF REQUESTED): FORBIDDEN to use 'set default' or 'area=0'. YOU MUST USE THIS EXACT TEMPLATE: 1) `/routing ospf instance add name=ospf1 router-id=<ip>` 2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1` 3) `/routing ospf network add network=<net> area=backbone`
 """
 
 PROSES_1_PROMPT = """
