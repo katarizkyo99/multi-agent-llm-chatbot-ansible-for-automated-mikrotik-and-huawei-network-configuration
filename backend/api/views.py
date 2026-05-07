@@ -77,13 +77,13 @@ SHARED_VENDOR_RULES = """
 - Up port: 'undo shutdown'. NO 'portswitch'.
 - VLAN: MUST create globally first (e.g., `vlan 10`).
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
-- OSPF (ONLY IF REQUESTED): 1-line (`ospf 1 router-id 1.1.1.1`). Net: WILDCARD mask. NO 'area X'.
+- OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
 
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`.
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
-- OSPF (ONLY IF REQUESTED): Explicit instance & area. NO 'set default'.
+- OSPF (ONLY IF REQUESTED): Explicit instance & area. Net: use `/routing ospf network add network=... area=...` (NEVER append 'instance=' in network command).
 """
 
 PROSES_1_PROMPT = """
