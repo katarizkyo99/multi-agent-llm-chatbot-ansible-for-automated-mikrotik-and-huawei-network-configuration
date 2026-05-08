@@ -83,8 +83,11 @@ SHARED_VENDOR_RULES = """
 - TRUNK: To undo trunk, MUST `undo port trunk allow-pass vlan <id>` BEFORE `undo port link-type`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
 - OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
-- DHCP: `dhcp enable` -> `ip pool <name>` (network, gateway-list, dns-list) -> Interface: `dhcp select global`.
-
+- DHCP (STRICT SEQ):
+  1. 'dhcp enable' (First).
+  2. 'ip pool <name>' -> set net, gateway, dns -> 'quit'.
+  3. 'vlan <id>' -> 'quit'.
+  4. 'interface Vlanif <id>' -> set 'ip address' -> 'dhcp select global' -> 'quit'.
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
 - VLAN: `/interface vlan add`. NEVER `/ip vlan`. 
@@ -93,7 +96,7 @@ SHARED_VENDOR_RULES = """
 - OSPF (ONLY IF REQUESTED): FORBIDDEN to use 'set default' or 'area=0'. 
   YOU MUST USE THIS EXACT TEMPLATE: 
   1) `/routing ospf instance add name=<OSPF_NAME> router-id=<ip> distribute-default=always-as-type-1`
-  2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1` 
+  2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=<OSPF_NAME>` 
   3) `/routing ospf network add network=<net> area=backbone`
 - NAT: If internet: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
@@ -109,7 +112,7 @@ ACTIONS:
 4. Read: `[READ_DEVICE] target_name, cli_command`
 
 WORKFLOW:
-- P1 (Analyze): Extract data. Output Mermaid. NO CONFIG. OSPF RULE: If OSPF requested without name, MUST ask: "Apa nama instance OSPF yang ingin Mas gunakan?" first. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
+- P1 (Analyze): Extract data. Output Mermaid. NO CONFIG. OSPF RULE: If OSPF requested without name, MUST ask: "Apa nama instance OSPF yang ingin anda gunakan?" first. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
 - P2 (Preview): Output MD config. Initial draft: ONLY Global VLANs & IP. Follow-up: Output ONLY requested new configs (INCREMENTAL). DO NOT repeat configs. STRICT FORMAT: Use Markdown headings for device names (e.g., `### routera`) and code blocks (```) for commands. NEVER use the words "Target:" or "Konfigurasi:". STRICTLY NO physical port guessing & NO OSPF unless asked. End EXACTLY: "Execute this now?"
 - P3 (Execute): Output EXACTLY `[GENERATE_CONFIG]` ONLY IF the user replies with a SHORT confirmation word (e.g., "ya", "yes", "lanjut", "gas", "execute"). IF the user replies with a long sentence, new instructions, or REPEATS the prompt, STRICTLY DO NOT output [GENERATE_CONFIG]. Instead, STAY in P2, apply the fix, and output the preview again.
 """
