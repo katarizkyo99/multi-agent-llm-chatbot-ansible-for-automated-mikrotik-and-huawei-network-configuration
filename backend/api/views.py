@@ -83,6 +83,7 @@ SHARED_VENDOR_RULES = """
 - TRUNK: To undo trunk, MUST `undo port trunk allow-pass vlan <id>` BEFORE `undo port link-type`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
 - OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
+- DHCP: `dhcp enable` -> `ip pool <name>` (network, gateway-list, dns-list) -> Interface: `dhcp select global`.
 
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
@@ -94,6 +95,7 @@ SHARED_VENDOR_RULES = """
   1) `/routing ospf instance add name=ospf1 router-id=<ip> originate-default=always` 
   2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=ospf1` 
   3) `/routing ospf network add network=<net> area=backbone`
+- NAT: If internet: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
 
 PROSES_1_PROMPT = """
