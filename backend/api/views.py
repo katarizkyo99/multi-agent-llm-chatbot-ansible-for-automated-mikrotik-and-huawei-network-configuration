@@ -74,6 +74,7 @@ def sanitize_mermaid(text):
 SHARED_VENDOR_RULES = """
 [GLOBAL]
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
+- PING LIMIT: ALWAYS limit ping tests to max 5 packets (e.g., `ping -c 5 <ip>` or `/ping <ip> count=5`).
 
 [HUAWEI]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
@@ -84,7 +85,7 @@ SHARED_VENDOR_RULES = """
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
 - SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
 - OSPF (IF REQ): 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
-- DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw,dns)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
+- DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
 
 [MIKROTIK]
 - Absolute paths (`/ip address add...`).
