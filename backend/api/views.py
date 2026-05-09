@@ -80,6 +80,7 @@ SHARED_VENDOR_RULES = """
 - Up port: 'undo shutdown'. NO 'portswitch'.
 - CREATION: VLAN MUST be created globally first. 
 - DELETION: You CAN enter the interface to remove specific configs (e.g., `undo ip address`). BUT, you MUST output `quit` to return to global view BEFORE executing global commands like `undo interface Vlanif <id>` or `undo vlan <id>`.
+- OSPF P2P PORT : If configuring a physical port for switch-to-switch OSPF/Routing (e.g., between two Huawei switches), ALWAYS use 'port link-type access' and 'port default vlan <id>'. MUST add 'stp disable' on this port to prevent STP blocking routing links.
 - TRUNK: To undo trunk, MUST `undo port trunk allow-pass vlan <id>` BEFORE `undo port link-type`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
 - OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
