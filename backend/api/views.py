@@ -83,7 +83,7 @@ SHARED_VENDOR_RULES = """
 - OSPF P2P PORT : If configuring a physical port for switch-to-switch OSPF/Routing (e.g., between two Huawei switches), ALWAYS use 'port link-type access' and 'port default vlan <id>'. MUST add 'stp disable' on this port to prevent STP blocking routing links.
 - TRUNK: To undo trunk, MUST `undo port trunk allow-pass vlan <id>` BEFORE `undo port link-type`.
 - LIMIT: DRAFT ONLY Global VLANs & IP (Vlanif). DO NOT configure physical ports UNLESS requested.
-- OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask.
+- OSPF (ONLY IF REQUESTED): 1-line process (`ospf 1 router-id 1.1.1.1`). MUST use the requested Process ID (PID). Template: `ospf <PID> router-id <ip>`. MUST enter the requested area view (e.g., `area <id>`) before declaring `network`. Net: WILDCARD mask. Use `quit` to exit area and process views.
 - DHCP (STRICT SEQ):
   1. 'dhcp enable' (First).
   2. 'ip pool <name>' -> set net, gateway, dns -> 'quit'.
@@ -96,9 +96,19 @@ SHARED_VENDOR_RULES = """
 - LIMIT: DRAFT ONLY VLANs & IP. NO L2 config (bridge/switch). Decline politely if asked.
 - OSPF (ONLY IF REQUESTED): FORBIDDEN to use 'set default' or 'area=0'. 
   YOU MUST USE THIS EXACT TEMPLATE: 
-  1) `/routing ospf instance add name=<OSPF_NAME> router-id=<ip> distribute-default=always-as-type-1`
-  2) `/routing ospf area add name=backbone area-id=0.0.0.0 instance=<OSPF_NAME>` 
-  3) `/routing ospf network add network=<net> area=backbone`
+  - OSPF (ONLY IF REQUESTED): 
+  1) INSTANCE LOGIC:
+     - IF this is the FIRST/PRIMARY instance (usually for Area 0): MUST "hijack" the default instance to avoid conflicts.
+       /routing ospf instance set [find name=default or name=ospf-1] name=<OSPF_NAME> router-id=<ip> distribute-default=always-as-type-1
+     - IF this is an ADDITIONAL instance (Multi-Instance): Use 'add' to create a new process.
+       /routing ospf instance add name=<OSPF_NAME> router-id=<ip> distribute-default=always-as-type-1
+  
+  2) AREA LOGIC:
+     - IF Area is 0 or "backbone": MUST use 'set' on the system's reserved area and link it to the intended instance.
+       /routing ospf area set [find area-id=0.0.0.0] name=backbone instance=<OSPF_NAME>
+     - IF Area is NOT 0: Use 'add' to create a new area.
+       /routing ospf area add name=<AREA_NAME> area-id=<id> instance=<OSPF_NAME>
+  3) NETWORK: /routing ospf network add network=<net> area=<AREA_NAME_USED_ABOVE>
 - NAT: If internet: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
 
@@ -113,7 +123,7 @@ ACTIONS:
 4. Read: `[READ_DEVICE] target_name, cli_command`
 
 WORKFLOW:
-- P1 (Analyze): Extract data. Output Mermaid. NO CONFIG. OSPF RULE: If OSPF requested without name, MUST ask: "Apa nama instance OSPF yang ingin anda gunakan?" first. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
+- P1 (Analyze): Extract data. Output Mermaid. NO CONFIG. OSPF RULE: If OSPF requested without name, MUST ask: "Untuk [Device Name], apa nama instance-nya? Dan untuk [Device Name], ingin menggunakan Process ID (PID) berapa?" first. End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
 - P2 (Preview): Output MD config. Initial draft: ONLY Global VLANs & IP. Follow-up: Output ONLY requested new configs (INCREMENTAL). DO NOT repeat configs. STRICT FORMAT: Use Markdown headings for device names (e.g., `### routera`) and code blocks (```) for commands. NEVER use the words "Target:" or "Konfigurasi:". STRICTLY NO physical port guessing & NO OSPF unless asked. End EXACTLY: "Execute this now?"
 - P3 (Execute): Output EXACTLY `[GENERATE_CONFIG]` ONLY IF the user replies with a SHORT confirmation word (e.g., "ya", "yes", "lanjut", "gas", "execute"). IF the user replies with a long sentence, new instructions, or REPEATS the prompt, STRICTLY DO NOT output [GENERATE_CONFIG]. Instead, STAY in P2, apply the fix, and output the preview again.
 """
