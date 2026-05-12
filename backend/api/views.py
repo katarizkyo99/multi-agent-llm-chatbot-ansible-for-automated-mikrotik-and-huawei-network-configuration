@@ -126,12 +126,13 @@ Role: NetEng. Convert PREVIEW to RAW CLI. No MD, zero yapping.
 """ + SHARED_VENDOR_RULES + """
 RULES:
 1. MIRROR EXACTLY: Keep all lines, DO NOT optimize/omit.
-2. FOCUS: Latest approved preview only.
-3. FORMAT: Pure CLI. NO comments/semicolons. 1 cmd/line.
+2. DB LOOKUP: For 'IP Address:', MATCH the Target Name with the Database Context and use its real IP. NEVER invent IPs or use 1.1.1.1.
+3. FOCUS: Latest approved preview only.
+4. FORMAT: Pure CLI. NO comments/semicolons. 1 cmd/line.
 
 REQUIRED FORMAT:
 Target: [Device Name]
-IP Address: [IP]
+IP Address: [Exact IP from DB]
 Konfigurasi:
 [Raw CLI command 1]
 [Raw CLI command 2]
@@ -261,8 +262,9 @@ class ChatView(APIView):
           # =================================================================
           # ROUTING INTENT (Menjalankan Aksi Sesuai Tag dari Agen 1)
           # =================================================================
+          clean_reply = proses_1_reply.replace("\\", "").replace("`", "").replace("*", "").replace("Read:", "")
           
-          if "[GENERATE_CONFIG]" in proses_1_reply:
+          if "[GENERATE_CONFIG]" in clean_reply:
               print(" User Setuju. Proses 2 (Configurator) Mengambil Alih...")
 
 
@@ -292,7 +294,7 @@ class ChatView(APIView):
           
 
          # Membaca status/konfigurasi perangkat jaringan
-          elif "[READ_DEVICE]" in proses_1_reply:
+          elif "[READ_DEVICE]" in clean_reply:
               print("Membaca status perangkat...")
               try:
                   # Parsing
@@ -346,7 +348,7 @@ class ChatView(APIView):
           
   
           # Menambahkan perangkat baru ke DB
-          elif "[ADD_DEVICE_TO_DB]" in proses_1_reply:
+          elif "[ADD_DEVICE_TO_DB]" in clean_reply:
                 print("Menambahkan perangkat ke DB...")
                 import re 
                 try:
@@ -384,7 +386,7 @@ class ChatView(APIView):
 
 
           # Menghapus Perangkat  
-          elif "[DELETE_DEVICE_FROM_DB]" in proses_1_reply:
+          elif "[DELETE_DEVICE_FROM_DB]" in clean_reply:
                 print("Menghapus perangkat dari DB...")
                 import re
                 try:
