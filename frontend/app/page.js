@@ -171,21 +171,21 @@ export default function Home() {
 
         try {
             const execResult = await executeConfig(editedConfig);
-            
+
             if (execResult && execResult.results && execResult.results.length > 0) {
-                const firstResult = execResult.results[0];
+                const feedbackArray = execResult.results.map(res => {
+                    return res.feedback || (res.status === 'success' 
+                        ? `Konfigurasi berhasil diproses di perangkat ${res.target}`
+                        : `Konfigurasi gagal diterapkan pada perangkat ${res.target}`);
+                });
+
+                outputMessage = feedbackArray.join('\n\n---\n\n');
                 
-                // MENGAMBIL FEEDBACK DARI BACKEND
-                outputMessage = firstResult.feedback || 
-                               (firstResult.status === 'success' 
-                                ? `✅ Konfigurasi berhasil diproses di perangkat ${firstResult.target}`
-                                : `❌ Konfigurasi gagal diterapkan pada perangkat ${firstResult.target}`);
-                
-                if (firstResult.status === 'success') {
+                if (execResult.results.every(r => r.status === 'success')) {
                     executionSuccess = true;
                 }
             } else {
-                outputMessage = "⚠️ Eksekusi selesai tapi tidak ada respons detail dari server.";
+                outputMessage = "Eksekusi selesai tapi tidak ada respons detail dari server.";
             }
 
             // Menyimpan ke database
@@ -217,7 +217,7 @@ export default function Home() {
             ));
 
         } catch (error) {
-            const errorMsg = `❌ Terjadi kesalahan sistem saat memproses: ${error.message}`;
+            const errorMsg = `Terjadi kesalahan sistem saat memproses: ${error.message}`;
             setChats((prev) => prev.map((c) => 
                 c.id === activeChatId 
                 ? { ...c, messages: [...(c.messages || []), { role: "bot", text: errorMsg }] } 
