@@ -173,16 +173,32 @@ export default function Home() {
             const execResult = await executeConfig(editedConfig);
 
             if (execResult && execResult.results && execResult.results.length > 0) {
-                const feedbackArray = execResult.results.map(res => {
-                    return res.feedback || (res.status === 'success' 
-                        ? `Konfigurasi berhasil diproses di perangkat ${res.target}`
-                        : `Konfigurasi gagal diterapkan pada perangkat ${res.target}`);
-                });
+                const successList = execResult.results.filter(r => r.status === 'success');
+                const failedList = execResult.results.filter(r => r.status !== 'success');
 
-                outputMessage = feedbackArray.join('\n\n---\n\n');
-                
-                if (execResult.results.every(r => r.status === 'success')) {
+                const formatNames = (names) => {
+                    if (names.length === 0) return "";
+                    if (names.length === 1) return names[0];
+                    if (names.length === 2) return `${names[0]} dan ${names[1]}`;
+                    return `${names.slice(0, -1).join(", ")}, dan ${names[names.length - 1]}`;
+                };
+
+                const successNames = formatNames(successList.map(r => r.target));
+                const failedNames = formatNames(failedList.map(r => r.target));
+                const failedDetails = failedList.map(r => r.feedback).join('\n\n---\n\n');
+
+                // Skenario 1: Semua Berhasil
+                if (failedList.length === 0) {
+                    outputMessage = `Konfigurasi berhasil diterapkan di perangkat **${successNames}**.`;
                     executionSuccess = true;
+                } 
+                // Skenario 2: Semua Gagal
+                else if (successList.length === 0) {
+                    outputMessage = `Konfigurasi gagal diterapkan pada semua perangkat (**${failedNames}**).\n\n${failedDetails}`;
+                } 
+                // Skenario 3: Sebagian Berhasil, Sebagian Gagal
+                else {
+                    outputMessage = `Konfigurasi berhasil diterapkan di perangkat **${successNames}**, sedangkan perangkat **${failedNames}** mengalami kegagalan.\n\n${failedDetails}`;
                 }
             } else {
                 outputMessage = "Eksekusi selesai tapi tidak ada respons detail dari server.";
