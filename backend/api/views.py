@@ -302,8 +302,8 @@ class ChatView(APIView):
                   parts = raw_intent.split(",", 1)
                   
                   if len(parts) == 2:
-                      target_device = parts[0].strip()
-                      target_command = parts[1].strip()
+                      target_device = parts[0].strip(' "\'')
+                      target_command = parts[1].strip(' "\'')
 
                       t0_ansible = time.time()
                       # Memanggil fungsi eksekutor Ansible Read
