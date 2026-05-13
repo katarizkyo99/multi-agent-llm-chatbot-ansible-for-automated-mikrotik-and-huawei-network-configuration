@@ -263,8 +263,10 @@ class ChatView(APIView):
           # ROUTING INTENT (Menjalankan Aksi Sesuai Tag dari Agen 1)
           # =================================================================
           clean_reply = proses_1_reply.replace("\\", "").replace("`", "").replace("*", "").replace("Read:", "")
+
+          is_short_confirm = len(user_message.strip()) <= 10
           
-          if "[GENERATE_CONFIG]" in clean_reply:
+          if "[GENERATE_CONFIG]" in clean_reply and is_short_confirm:
               print(" User Setuju. Proses 2 (Configurator) Mengambil Alih...")
 
 
@@ -291,7 +293,10 @@ class ChatView(APIView):
                   model="llama-3.3-70b-versatile", 
                   messages=messages_for_proses_2
               )
-          
+
+          elif "[GENERATE_CONFIG]" in clean_reply and not is_short_confirm:
+              print(" Memblokir eksekusi otomatis karena prompt user panjang.")
+              final_bot_reply = final_bot_reply.replace("[GENERATE_CONFIG]", "").replace("`", "")
 
          # Membaca status/konfigurasi perangkat jaringan
           elif "[READ_DEVICE]" in clean_reply:
