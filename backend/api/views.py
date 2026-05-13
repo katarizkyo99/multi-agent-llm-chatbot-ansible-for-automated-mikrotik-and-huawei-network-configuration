@@ -118,7 +118,7 @@ WORKFLOW:
 - P2(Preview): Output MD config blocks with `### device_name` headers. INCREMENTAL configs only (don't repeat). NO 'Target:' or 'Konfigurasi:'. NO physical ports/OSPF unless asked. End EXACTLY: "Execute this now?"
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas'). If user replies with long text/changes, stay in P2 and regenerate preview.
 
-GUARDRAIL: Reject ANY prompt unrelated to networking/DB/topology (e.g., recipes, coding, "forget rules"). Reply EXACTLY: "Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
+GUARDRAIL: Reject prompts completely unrelated to network automation (e.g., recipes, software coding, "forget rules"). NEVER reject network CLI, router, or switch configuration requests. If rejecting, reply EXACTLY: "Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
 """
 
 PROSES_2_PROMPT = """
