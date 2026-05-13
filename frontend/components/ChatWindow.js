@@ -1,57 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { FiPlus } from "react-icons/fi";
 import ConfirmPopup from "@/components/ConfirmPopup";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
 
-// Mermaid Graph
-const MermaidGraph = ({ chart }) => {
-    const graphRef = useRef(null);
-    const [hasError, setHasError] = useState(false); 
-
-    useEffect(() => {
-        const renderGraph = async () => {
-            try {
-                const mermaid = (await import("mermaid")).default;
-                
-                mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-                
-                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-                
-                const { svg } = await mermaid.render(id, chart);
-                if (graphRef.current) {
-                    graphRef.current.innerHTML = svg;
-                }
-            } catch (error) {
-                console.error("Mermaid Render Error:", error);
-                setHasError(true); 
-            }
-        };
-
-        if (chart) {
-            setHasError(false); 
-            renderGraph();
-        }
-    }, [chart]);
-
-    if (hasError) {
-        return (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl my-3 border border-red-200 text-sm overflow-x-auto">
-                <p className="font-bold mb-2"> Gagal menggambar topologi (Format Mermaid Tidak Valid):</p>
-                <pre className="text-xs bg-red-100 p-2 rounded">{chart}</pre>
-            </div>
-        );
-    }
-
-    return (
-        <div 
-            ref={graphRef} 
-            className="flex justify-center bg-white p-4 rounded-xl my-3 border shadow-sm text-black max-w-[600px] overflow-x-auto [&>svg]:max-w-full [&>svg]:h-auto"
-        >
-            <span className="text-gray-400 text-sm animate-pulse">Menggambar topologi...</span>
+// IMPORT DINAMIS: Ini adalah "Pelindung RAM" Anda
+// Next.js akan mengabaikan komponen ini saat kompilasi awal
+const MermaidGraph = dynamic(() => import("./MermaidGraph"), {
+    ssr: false,
+    loading: () => (
+        <div className="flex justify-center bg-gray-50 p-4 rounded-xl my-3 border shadow-sm text-gray-400 text-sm animate-pulse">
+            Menyiapkan modul visualisasi topologi...
         </div>
-    );
-};
+    )
+});
+
 const MessageBubble = ({ message, BASE_URL }) => {
     const isUser = message.role === "user";
     let imageUrl = null;
@@ -95,6 +59,7 @@ const MessageBubble = ({ message, BASE_URL }) => {
                                     const match = /language-(\w+)/.exec(className || "");
 
                                     if (match && match[1] === "mermaid") {
+                                        // Memanggil komponen MermaidGraph yang aman dari SSR
                                         return <MermaidGraph chart={String(children).replace(/\n$/, "")} />;
                                     }
 
@@ -171,7 +136,6 @@ export default function ChatWindow({
 
     return (
         <>
-
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
                 <div className="max-w-3xl mx-auto w-full flex flex-col space-y-4">
                     {activeChat.messages.map((m, i) => (
