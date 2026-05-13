@@ -197,7 +197,7 @@ class ChatView(APIView):
   
       # Mengambil 10 pesan terakhir untuk konteks LLM
       raw_history = Message.objects.filter(chat=chat).order_by("timestamp")
-      history = list(raw_history)[-10:]
+      history = list(raw_history)[-6:]
       messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
       for m in history:
           if m.content:
