@@ -247,7 +247,7 @@ class ChatView(APIView):
               
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="llama-3.1-8b-instant", #openai/gpt-oss-120b #llama-3.3-70b-versatile
+                  model="openai/gpt-oss-20b", #openai/gpt-oss-120b #llama-3.3-70b-versatile
                   messages=messages_for_llm,
                   temperature = 0.1
               )
