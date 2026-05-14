@@ -94,7 +94,7 @@ SHARED_VENDOR_RULES = """
 - VLAN: `/int vlan add`. NEVER `/ip vlan`. 
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
-- NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
+- NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
 - OSPF (IF REQ): NEVER use 'set default' or 'area=0'. MUST USE THIS TEMPLATE:
   1) INSTANCE: 
      - If Primary/Area0: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
