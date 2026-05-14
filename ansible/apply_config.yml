@@ -26,26 +26,17 @@
         'expected end' not in (mikrotik_result.stdout | default('') | lower) and
         'input does not match' not in (mikrotik_result.stdout | default('') | lower) and
         'no such item' not in (mikrotik_result.stdout | default('') | lower)
-          
+
+
     - name: Apply config to Huawei
-      community.network.ce_command:
-        # Kirim semua baris perintah sekaligus dalam bentuk list (tanpa loop!)
-        commands: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
+      community.network.ce_config:
+        lines: "{{ config_cli.split('\n') }}"
       when: ansible_network_os == 'community.network.ce' and config_cli | trim != ''
       register: huawei_result
       ignore_errors: yes
       
-      # Filter Cerdas: Deteksi Error (Merah)
-      failed_when: >
-        huawei_result.failed == true or
-        "Error:" in (huawei_result.stdout | join(' ') | string) or
-        "Unrecognized" in (huawei_result.stdout | join(' ') | string)
-        
-      # Filter Cerdas: Deteksi Berubah (Kuning)
-      changed_when: >
-        huawei_result.failed == false and
-        "Error:" not in (huawei_result.stdout | join(' ') | string) and
-        "Unrecognized" not in (huawei_result.stdout | join(' ') | string)
+      failed_when: huawei_result.failed == true
+      changed_when: huawei_result.changed == true
       
     - name: "Tampilkan Hasil Eksekusi Perangkat"
       debug:
@@ -53,4 +44,4 @@
           - "=== OUTPUT MIKROTIK ==="
           - "{{ mikrotik_result.results | default([]) | map(attribute='stdout') | list | default('N/A') }}"
           - "=== OUTPUT HUAWEI ==="
-          - "{{ huawei_result.stdout | default('N/A') }}"
+          - "{{ huawei_result.updates | default(huawei_result.msg | default('N/A')) }}"
