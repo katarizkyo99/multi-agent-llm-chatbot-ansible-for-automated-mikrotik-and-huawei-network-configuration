@@ -73,6 +73,7 @@ def sanitize_mermaid(text):
 # ==============================================================================
 SHARED_VENDOR_RULES = """
 [GLOBAL]
+- NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
 - PING LIMIT: ALWAYS limit ping tests to max 5 packets (e.g., `ping -c 5 <ip>` or `/ping <ip> count=5`).
 
