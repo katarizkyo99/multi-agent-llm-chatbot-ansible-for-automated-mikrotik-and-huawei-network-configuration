@@ -295,7 +295,7 @@ class ChatView(APIView):
 
               final_bot_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="llama-3.3-70b-versatile", 
+                  model="llama-3.1-8b-instant", 
                   messages=messages_for_proses_2
               )
 
