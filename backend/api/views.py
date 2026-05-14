@@ -21,7 +21,13 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
         "messages": messages,
         "temperature": temperature,
         "max_tokens": 2048
+        "tool_choice": "none"
     }
+
+    for msg in payload["messages"]:
+        if isinstance(msg.get("content"), str):
+            msg["content"] = msg["content"].replace("repo_browser.write_file", "")
+    
     resp = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
