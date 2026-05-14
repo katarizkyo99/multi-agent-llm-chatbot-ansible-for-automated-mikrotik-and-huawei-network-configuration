@@ -20,7 +20,7 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
         "model": model,
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": 2048
+        "max_tokens": 2048,
         "tool_choice": "none"
     }
 
