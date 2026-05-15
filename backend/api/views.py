@@ -103,6 +103,8 @@ SHARED_VENDOR_RULES = """
      - If 0/backbone: `/routing ospf area set [find area-id=0.0.0.0] name=backbone instance=<NAME>`
      - Else: `/routing ospf area add name=<AREA_NAME> area-id=<id> instance=<NAME>`
   3) NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
+- DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
+- NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
 """
 
 PROSES_1_PROMPT = """
