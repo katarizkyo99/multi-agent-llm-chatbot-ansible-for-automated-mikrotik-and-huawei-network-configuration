@@ -7,7 +7,7 @@ import MessageInput from "@/components/MessageInput";
 import HistoryViewer from "@/components/HistoryViewer";
 
 export default function Home() {
-    const BASE_URL = "http://192.168.0.104:8000"; // Sesuaikan IP 
+    const BASE_URL = "http://192.168.1.2:8000"; // Sesuaikan IP 
 
     // =========================================================================
     // SECTION 1: STATE MANAGEMENT
@@ -320,7 +320,7 @@ export default function Home() {
             if (data.error) throw new Error(data.error);
 
             // Mendapatkan balasan bot
-            const botReply = data.cli || data.reply || "⚠️ Tidak ada balasan.";
+            const botReply = data.cli || data.reply || "Tidak ada balasan.";
 
             // Memperbarui chat dengan balasan asisten LLM
             setChats((prev) => prev.map((c) => 
