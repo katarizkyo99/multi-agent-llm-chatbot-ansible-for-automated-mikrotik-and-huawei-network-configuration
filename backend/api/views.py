@@ -297,7 +297,7 @@ class ChatView(APIView):
 
               final_bot_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="openai/gpt-oss-20b", 
+                  model="llama-3.3-70b-versatile", 
                   messages=messages_for_proses_2
               )
 
