@@ -97,10 +97,10 @@ SHARED_VENDOR_RULES = """
 - NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
 - OSPF (IF REQ): NEVER use 'set default' or 'area=0'. MUST USE THIS TEMPLATE (Keep spaces before brackets!):
   1) INSTANCE: 
-     - If Primary/Area0: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+     - If Area0/backbone: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
      - If Add: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
   2) AREA: 
-     - If 0/backbone: `/routing ospf area set [find area-id=0.0.0.0] name=backbone instance=<NAME>`
+     - If Area0/backbone: `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
      - Else: `/routing ospf area add name=<AREA_NAME> area-id=<id> instance=<NAME>`
   3) NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
 - DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
