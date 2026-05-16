@@ -163,24 +163,11 @@ class ChatView(APIView):
       user_message = request.data.get("prompt", "")
       uploaded_image = request.FILES.get("image")
       chat_id = request.data.get("chat_id") 
-      # Mengambil chat / membuat percakapan baru
-      chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
-
-      if user_message.strip().lower() in ['hai', 'halo', 'p', 'test', 'hello', 'siapa kamu']:
-          if chat_id:
-              chat_obj = Chat.objects.filter(id=chat_id).first()
-              if chat_obj:
-                  chat_obj.topology_data = ""
-                  chat_obj.save()
-                    
-          return Response({
-              "chat_id": chat_id,
-              "title": "Basa-basi",
-              "reply": "Halo Mas Kyo! Ada yang bisa saya bantu untuk konfigurasi perangkat jaringan hari ini?",
-              "messages": [{"role": "assistant", "text": "Halo Mas Kyo! Ada yang bisa saya bantu untuk konfigurasi perangkat jaringan hari ini?"}]
-          }, status=200)
        
-      
+      # Mengambil chat / membuat percakapan baru
+      chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru"
+       
+    
       # Menyimpan pesan user
       if uploaded_image:
           Message.objects.create(chat=chat, role="user", content=user_message or "Uploaded Image", image=uploaded_image)
