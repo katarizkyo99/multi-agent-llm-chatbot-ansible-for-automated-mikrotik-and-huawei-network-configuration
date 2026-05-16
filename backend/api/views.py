@@ -165,7 +165,7 @@ class ChatView(APIView):
       chat_id = request.data.get("chat_id") 
        
       # Mengambil chat / membuat percakapan baru
-      chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru"
+      chat = Chat.objects.filter(id=chat_id).first() if chat_id else Chat.objects.create(title="Percakapan Baru")
        
     
       # Menyimpan pesan user
