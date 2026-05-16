@@ -96,7 +96,7 @@ SHARED_VENDOR_RULES = """
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
 - NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (IF REQ): NEVER use 'set default' or 'area=0'. MUST USE THIS TEMPLATE (Keep spaces before brackets!):
+- OSPF (STRICT LOGIC): NEVER use 'set default' or 'area=0'. MUST KEEP THE SPACE after 'set' and before '['. STRICTLY FORBIDDEN to write `set["find`. Follow this EXACT syntax with double quotes:
   - IF USER ASKS FOR AREA 0 / BACKBONE:
     1) INSTANCE (Hijack default): `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
     2) AREA (Hijack backbone): `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
