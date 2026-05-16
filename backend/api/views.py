@@ -77,6 +77,7 @@ SHARED_VENDOR_RULES = """
 - NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
 - PING LIMIT: ALWAYS limit ping tests to max 5 packets (e.g., `ping -c 5 <ip>` or `/ping <ip> count=5`).
+- STRICT OUTPUT: If the user explicitly asks for configuration/routing, you MUST directly output the raw CLI commands for each device. DO NOT say conversational introduction (e.g., "Here is the config"), DO NOT ask confirmation questions, and DO NOT chat. Output raw CLI immediately.
 
 [HUAWEI]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
@@ -100,9 +101,9 @@ SHARED_VENDOR_RULES = """
      - If Area0/backbone: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
      - If Add: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
   2) AREA: 
-     - If Area0/backbone: `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
+     - If not Area0/backbone: `/routing ospf area set [find area-id=0.0.0.0] name=backbone instance=<NAME>`
      - Else: `/routing ospf area add name=<AREA_NAME> area-id=<id> instance=<NAME>`
-  3) NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
+  3) NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>` revisi aja ini, gausah bikin baru
 - DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
 - NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
 """
