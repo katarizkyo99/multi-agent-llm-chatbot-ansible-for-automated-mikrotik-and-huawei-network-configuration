@@ -87,7 +87,7 @@ SHARED_VENDOR_RULES = """
 - OSPF L3 PORT: For switch-to-switch routing, USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
 - SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
-- OSPF (STRICT): NEVER use Cisco syntax ('router ospf'). EXACT SEQ: 1) `ospf <PID> router-id <ip>` 2) `area <id>` 3) `network <ip> <wildcard>` 4) `quit` 5) `quit`.
+- OSPF (IF REQ): 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
 - DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
 
 [MIKROTIK]
@@ -96,9 +96,9 @@ SHARED_VENDOR_RULES = """
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
 - NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (STRICT TEMPLATE): You MUST use these exact templates. Pay attention to the SPACE after the word 'set' and before the bracket '[':
+- OSPF (STRICT TEMPLATE): You MUST use these exact templates. Pay attention to the SPACE after 'set' and INSIDE the brackets. NEVER use quotes inside the find block.
   - IF USER ASKS FOR AREA 0 / BACKBONE:
-    1) INSTANCE (Hijack default): `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+    1) INSTANCE (Hijack default): `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
     2) AREA (Hijack backbone): `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
   - IF USER ASKS FOR NON-BACKBONE AREA (e.g., Area 10, Area 20):
     1) INSTANCE (Create new): `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
