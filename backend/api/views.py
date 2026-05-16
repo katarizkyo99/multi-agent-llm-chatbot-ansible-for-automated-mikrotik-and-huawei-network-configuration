@@ -86,7 +86,7 @@ SHARED_VENDOR_RULES = """
 - OSPF L3 PORT: For switch-to-switch routing, USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
 - SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
-- OSPF (IF REQ): 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
+- OSPF (STRICT): NEVER use Cisco syntax ('router ospf'). EXACT SEQ: 1) `ospf <PID> router-id <ip>` 2) `area <id>` 3) `network <ip> <wildcard>` 4) `quit` 5) `quit`.
 - DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
 
 [MIKROTIK]
@@ -95,7 +95,7 @@ SHARED_VENDOR_RULES = """
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
 - NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (IF REQ): NEVER use 'set default' or 'area=0'. MUST USE THIS TEMPLATE:
+- OSPF (IF REQ): NEVER use 'set default' or 'area=0'. MUST USE THIS TEMPLATE (Keep spaces before brackets!):
   1) INSTANCE: 
      - If Primary/Area0: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
      - If Add: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
