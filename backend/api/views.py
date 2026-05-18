@@ -162,8 +162,11 @@ HUAWEI_DHCP_TEMPLATE = """
 MIKROTIK_OSPF_TEMPLATE = """
 [MIKROTIK OSPF (CRITICAL SYNTAX RULES)]
 - CRITICAL: You MUST write the 'find' command EXACTLY with a space BEFORE the bracket and NO QUOTES inside the bracket.
-- CORRECT: `set [find name=default]`
-- WRONG: `set["find name=default"]` (NEVER DO THIS)
+- CRITICAL LITERAL: The exact string `[find name=default or name=ospf-1]` MUST be copied word-for-word. DO NOT shorten or simplify it.
+
+CORRECT: `set [find name=default or name=ospf-1]`
+WRONG: `set [find name=default]` (DO NOT SIMPLIFY)
+WRONG: `set["find name=default"]`
 
 - IF AREA 0 / BACKBONE:
   1) INSTANCE: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
