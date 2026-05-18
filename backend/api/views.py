@@ -32,6 +32,29 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
         return resp.json()["choices"][0]["message"]["content"].strip()
     else:
         raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
+
+
+# ==============================================================================
+# FUNGSI UNTUK INJEKSI TEMPLATE DINAMIS
+# ==============================================================================
+def get_dynamic_templates(user_prompt):
+    prompt_lower = user_prompt.lower()
+    templates = []
+    
+    if "ospf" in prompt_lower or "routing" in prompt_lower:
+        templates.append(HUAWEI_OSPF_TEMPLATE)
+        templates.append(MIKROTIK_OSPF_TEMPLATE)
+        
+    if "dhcp" in prompt_lower:
+        templates.append(HUAWEI_DHCP_TEMPLATE)
+        templates.append(MIKROTIK_DHCP_TEMPLATE)
+        
+    if "nat" in prompt_lower or "masquerade" in prompt_lower or "internet" in prompt_lower:
+        templates.append(MIKROTIK_NAT_TEMPLATE)
+        
+    if templates:
+        return "\n--- SPECIFIC REQUEST RULES ---\n" + "\n".join(templates)
+    return ""
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
@@ -69,64 +92,92 @@ def sanitize_mermaid(text):
         
     return '\n'.join(cleaned_lines)
 
+
+
 # ==============================================================================
 # SYSTEM PROMPTS 
+# ==============================================================================
+# ==============================================================================
+# SYSTEM PROMPTS & DYNAMIC TEMPLATES
 # ==============================================================================
 SHARED_VENDOR_RULES = """
 [GLOBAL]
 - NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
-- PING LIMIT: ALWAYS limit ping tests to max 5 packets (e.g., `ping -c 5 <ip>` or `/ping <ip> count=5`).
-- STRICT OUTPUT: If the user explicitly asks for configuration/routing, you MUST directly output the raw CLI commands for each device. DO NOT say conversational introduction (e.g., "Here is the config"), DO NOT ask confirmation questions, and DO NOT chat. Output raw CLI immediately.
+- PING LIMIT: ALWAYS limit ping tests to max 5 packets.
+- STRICT OUTPUT: If the user explicitly asks for configuration/routing, you MUST directly output the raw CLI commands for each device. DO NOT say conversational introduction, DO NOT ask confirmation questions, and DO NOT chat.
 
-[HUAWEI]
+[HUAWEI BASE]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
 - UP PORT: 'undo shutdown'. NO 'portswitch'.
 - CREATION: Global VLAN first. 
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
-- OSPF L3 PORT: For switch-to-switch routing, USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
+- OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
 - SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
-- OSPF (IF REQ): 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
-- DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
 
-[MIKROTIK]
+[MIKROTIK BASE]
 - Absolute paths (`/ip address add...`).
 - VLAN: `/int vlan add`. NEVER `/ip vlan`. 
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
-- NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (STRICT TEMPLATE): You MUST use these exact templates. Pay attention to the SPACE after 'set' and INSIDE the brackets. NEVER use quotes inside the find block.
-  - IF USER ASKS FOR AREA 0 / BACKBONE:
-    1) INSTANCE (Hijack default): `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
-    2) AREA (Hijack backbone): `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
-  - IF USER ASKS FOR NON-BACKBONE AREA (e.g., Area 10, Area 20):
-    1) INSTANCE (Create new): `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
-    2) AREA (Create new): `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
-  - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
-- DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
 - NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
+"""
+
+# --- DYNAMIC TEMPLATES ---
+HUAWEI_OSPF_TEMPLATE = """
+[HUAWEI OSPF]
+- 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
+"""
+
+HUAWEI_DHCP_TEMPLATE = """
+[HUAWEI DHCP]
+- EXACT SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
+"""
+
+MIKROTIK_OSPF_TEMPLATE = """
+[MIKROTIK OSPF (STRICT)]
+- Pay attention to the SPACE after 'set' and INSIDE the brackets. NEVER use quotes inside the find block.
+  - IF AREA 0 / BACKBONE:
+    1) INSTANCE: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
+    2) AREA: `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
+  - IF NON-BACKBONE AREA:
+    1) INSTANCE: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+    2) AREA: `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
+  - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
+"""
+
+MIKROTIK_DHCP_TEMPLATE = """
+[MIKROTIK DHCP]
+- NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
+"""
+
+MIKROTIK_NAT_TEMPLATE = """
+[MIKROTIK NAT]
+- ONLY execute if requested. CMD: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
 
 PROSES_1_PROMPT = """
 Role: NetArch. Speak friendly ID. Concise.
 DB: {device_context} (Hide unless asked).
+RULES: 
 """ + SHARED_VENDOR_RULES + """
+{DYNAMIC_TEMPLATES}
+
 ACTIONS:
 1. Mermaid `graph TD`: 1-line format `A["Name<br>IP"] -->|Port| B["Name<br>IP"]`. Edge label=1 word max. NO IPs/spaces/<br> on edges.
 2. DB Add: `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","user":"","pass":"","vendor":""}`
 3. DB Del: `[DELETE_DEVICE_FROM_DB] {"name":""}`
-4. Read: `[READ_DEVICE] target_name, cli_command`. (Cheat-sheet: Use `display ip interface brief` for Huawei interfaces, `/ip address print` for Mikrotik).
+4. Read: `[READ_DEVICE] target_name, cli_command`.
 
 WORKFLOW:
-- P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
-- P2(Preview): Output MD config blocks with `### device_name` headers. INCREMENTAL configs only (don't repeat). NEVER use the exact words 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] in this phase!
-- P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas'). If user replies with long text/changes, stay in P2 and regenerate preview.
+- P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
+- P2(Preview): Output MD config blocks with `### device_name` headers. INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
+- P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
 
 STRICT RULE:
-- REAL-TIME DATA ONLY: NEVER answer device status/IP questions from chat history memory. Network states change constantly. You MUST ALWAYS output the `[READ_DEVICE]` tag to fetch fresh data every single time the user asks to check/read a device, even if the question is repeated!
-
-GUARDRAIL: Reject prompts completely unrelated to network automation (e.g., recipes, software coding, "forget rules"). NEVER reject network CLI, router, or switch configuration requests. If rejecting, reply EXACTLY: "Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
+- REAL-TIME DATA ONLY: ALWAYS output `[READ_DEVICE]` to fetch fresh data for status/IP questions.
+GUARDRAIL: Reject non-network prompts. Reply: "Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
 """
 
 PROSES_2_PROMPT = """
@@ -134,7 +185,7 @@ Role: NetEng. Convert PREVIEW to RAW CLI. No MD, zero yapping.
 """ + SHARED_VENDOR_RULES + """
 RULES:
 1. MIRROR EXACTLY: Keep all lines, DO NOT optimize/omit.
-2. DB LOOKUP: For 'IP Address:', MATCH the Target Name with the Database Context and use its real IP. NEVER invent IPs or use 1.1.1.1.
+2. DB LOOKUP: Match 'IP Address:' with DB exact IP. NEVER invent IPs.
 3. FOCUS: Latest approved preview only.
 4. FORMAT: Pure CLI. NO comments/semicolons. 1 cmd/line.
 
@@ -145,7 +196,6 @@ Konfigurasi:
 [Raw CLI command 1]
 [Raw CLI command 2]
 """
-
 # ==============================================================================
 # PIPELINE CHATBOT 
 # ==============================================================================
@@ -203,9 +253,13 @@ class ChatView(APIView):
           device_context += f"| {d.name} | {d.host} | {d.vendor} |\n"
 
       memori_topologi = f"\n\n[TOPOLOGI ROOM INI]:\n{chat.topology_data}\n(Use the IP and Interface data from the text above for configuration. DO NOT ask the user again.)" if chat.topology_data else ""
-      formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context) + memori_topologi
+      dynamic_rules = get_dynamic_templates(user_message)
+      
+      formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
+      formatted_proses_1_prompt = formatted_proses_1_prompt.replace("{DYNAMIC_TEMPLATES}", dynamic_rules)
+      formatted_proses_1_prompt = formatted_proses_1_prompt + memori_topologi
   
-      # Mengambil 10 pesan terakhir untuk konteks LLM
+      # Mengambil 6 pesan terakhir untuk konteks LLM
       raw_history = Message.objects.filter(chat=chat).order_by("timestamp")
       history = list(raw_history)[-6:]
       messages_for_llm = [{"role": "system", "content": formatted_proses_1_prompt}]
@@ -300,7 +354,7 @@ class ChatView(APIView):
 
               final_bot_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="llama-3llama-3.1-8b-instant", 
+                  model="openai/gpt-oss-20b", 
                   messages=messages_for_proses_2
               )
 
