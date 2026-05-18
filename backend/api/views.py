@@ -96,13 +96,13 @@ SHARED_VENDOR_RULES = """
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
 - NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (STRICT TEMPLATE): You MUST use these exact templates. Pay attention to the SPACE after 'set' and INSIDE the brackets. NEVER use quotes inside the find block.
+- OSPF (FOLLOW THIS TEMPLATE):
   - IF USER ASKS FOR AREA 0 / BACKBONE:
-    1) INSTANCE (Hijack default): `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
-    2) AREA (Hijack backbone): `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
-  - IF USER ASKS FOR NON-BACKBONE AREA (e.g., Area 10, Area 20):
-    1) INSTANCE (Create new): `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
-    2) AREA (Create new): `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
+    1) INSTANCE : `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
+    2) AREA : `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
+  - IF USER ASKS FOR NON-BACKBONE AREA (e.g., Area 1, Area 2):
+    1) INSTANCE : `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+    2) AREA : `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
   - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
 - DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
 - NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
