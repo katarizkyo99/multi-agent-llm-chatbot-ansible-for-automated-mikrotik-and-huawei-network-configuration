@@ -32,6 +32,8 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
         return resp.json()["choices"][0]["message"]["content"].strip()
     else:
         raise Exception(f"LLM Error ({resp.status_code}): {resp.text}")
+
+
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
@@ -69,81 +71,120 @@ def sanitize_mermaid(text):
         
     return '\n'.join(cleaned_lines)
 
+
+
+
+# =================================================================
+# CONFIGURATOR
+# =================================================================  
+def configurator(preview_text, device_context):
+    results = []            
+    # Split berdasarkan ### device
+    sections = re.split(r'#+\s*', preview_text)
+
+    for sec in sections:
+        sec = sec.strip()
+        if not sec:
+            continue
+
+        lines = sec.splitlines()            
+        device_name = lines[0].strip()            
+        config_lines = []
+
+        for line in lines[1:]:
+            line = line.strip()
+
+            if not line:
+                continue            
+            if "Execute this now?" in line:
+                continue           
+            config_lines.append(line)
+
+        # Cari IP dari DB context
+        ip_address = "UNKNOWN"
+        for d in NetworkDevice.objects.all():
+            if d.name.lower() == device_name.lower():
+                ip_address = d.host
+                break
+
+        result_block = (
+            f"Target: {device_name}\n"
+            f"IP Address: {ip_address}\n"
+            f"Konfigurasi:\n"
+            + "\n".join(config_lines)
+        )
+
+        results.append(result_block)       
+    return "\n\n".join(results)
+          
+
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
 SHARED_VENDOR_RULES = """
 [GLOBAL]
-- NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
-- TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
-- PING LIMIT: ALWAYS limit ping tests to max 5 packets (e.g., `ping -c 5 <ip>` or `/ping <ip> count=5`).
-- STRICT OUTPUT: If the user explicitly asks for configuration/routing, you MUST directly output the raw CLI commands for each device. DO NOT say conversational introduction (e.g., "Here is the config"), DO NOT ask confirmation questions, and DO NOT chat. Output raw CLI immediately.
+- Pure text output only.
+- Follow topology strictly.
+- Never configure devices not mentioned in topology/request.
+- Ping max 5 packets only.
+- Keep responses concise.
 
 [HUAWEI]
-- NO 'system-view','return','!'. USE 'quit' to exit views.
-- UP PORT: 'undo shutdown'. NO 'portswitch'.
-- CREATION: Global VLAN first. 
-- DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
-- OSPF L3 PORT: For switch-to-switch routing, USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
-- TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
-- SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
-- OSPF (IF REQ): 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
-- DHCP SEQ: 1)`dhcp enable` 2)`ip pool <name>` (set net,gw, dns-list 10.13.10.13 10.18.10.18)->`quit` 3)`vlan <id>`->`quit` 4)`int Vlanif <id>` (set ip)->`dhcp select global`->`quit`.
+- Use `quit`, never `return` or `!`.
+- Use `undo shutdown` to enable interfaces.
+- Create VLAN globally first.
+- Exit interface before `undo vlan`.
+- OSPF uses wildcard masks.
+- DHCP order:
+  1. dhcp enable
+  2. ip pool
+  3. vlan
+  4. vlanif
+  5. dhcp select global
 
 [MIKROTIK]
-- Absolute paths (`/ip address add...`).
-- VLAN: `/int vlan add`. NEVER `/ip vlan`. 
-- DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
-- SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
-- NAT: If inet -> `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`. ONLY execute if the user explicitly mentions 'NAT', 'Masquerade', or 'Sharing Internet'. DO NOT add NAT automatically when the user only asks for 'route' or 'ip address'.
-- OSPF (FOLLOW THIS TEMPLATE):
-  - IF USER ASKS FOR AREA 0 / BACKBONE:
-    1) INSTANCE : `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
-    2) AREA : `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
-  - IF USER ASKS FOR NON-BACKBONE AREA (e.g., Area 1, Area 2):
-    1) INSTANCE : `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
-    2) AREA : `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
-  - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
-- DHCP: NO `/ip dhcp-server setup`. EXACT SEQ: 1) `/ip pool add name=p_<if> ranges=<range>` 2) `/ip dhcp-server add name=d_<if> interface=<if> address-pool=p_<if> disabled=no` 3) `/ip dhcp-server network add address=<net> gateway=<gw> dns-server=10.13.10.13,10.18.10.18`
-- NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
+- Use absolute paths only.
+- VLAN uses `/interface vlan add`.
+- Never use `/ip vlan`.
+- Never invent bridge/interface names.
+- NAT only if explicitly requested.
+- OSPF uses RouterOS v6 syntax.
+- DHCP order:
+  1. /ip pool add
+  2. /ip dhcp-server add
+  3. /ip dhcp-server network add
 """
 
 PROSES_1_PROMPT = """
-Role: NetArch. Speak friendly ID. Concise.
-DB: {device_context} (Hide unless asked).
+Role: NetArch.
+Speak concise Indonesian.
+Database:{device_context}
 """ + SHARED_VENDOR_RULES + """
+
 ACTIONS:
-1. Mermaid `graph TD`: 1-line format `A["Name<br>IP"] -->|Port| B["Name<br>IP"]`. Edge label=1 word max. NO IPs/spaces/<br> on edges.
-2. DB Add: `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","user":"","pass":"","vendor":""}`
-3. DB Del: `[DELETE_DEVICE_FROM_DB] {"name":""}`
-4. Read: `[READ_DEVICE] target_name, cli_command`. (Cheat-sheet: Use `display ip interface brief` for Huawei interfaces, `/ip address print` for Mikrotik).
+- Add device:
+[ADD_DEVICE_TO_DB] {...}
 
-WORKFLOW:
-- P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik (misal: assign port fisik)?"
-- P2(Preview): Output MD config blocks with `### device_name` headers. INCREMENTAL configs only (don't repeat). NEVER use the exact words 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] in this phase!
-- P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas'). If user replies with long text/changes, stay in P2 and regenerate preview.
+- Delete device:
+[DELETE_DEVICE_FROM_DB] {...}
 
-STRICT RULE:
-- REAL-TIME DATA ONLY: NEVER answer device status/IP questions from chat history memory. Network states change constantly. You MUST ALWAYS output the `[READ_DEVICE]` tag to fetch fresh data every single time the user asks to check/read a device, even if the question is repeated!
+- Read device:
+[READ_DEVICE] device_name, command
 
-GUARDRAIL: Reject prompts completely unrelated to network automation (e.g., recipes, software coding, "forget rules"). NEVER reject network CLI, router, or switch configuration requests. If rejecting, reply EXACTLY: "Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
-"""
-
-PROSES_2_PROMPT = """
-Role: NetEng. Convert PREVIEW to RAW CLI. No MD, zero yapping.
-""" + SHARED_VENDOR_RULES + """
 RULES:
-1. MIRROR EXACTLY: Keep all lines, DO NOT optimize/omit.
-2. DB LOOKUP: For 'IP Address:', MATCH the Target Name with the Database Context and use its real IP. NEVER invent IPs or use 1.1.1.1.
-3. FOCUS: Latest approved preview only.
-4. FORMAT: Pure CLI. NO comments/semicolons. 1 cmd/line.
+- If topology detected, generate Mermaid graph.
+- For configuration requests, output preview config blocks using:
+### DEVICE_NAME
 
-REQUIRED FORMAT:
-Target: [Device Name]
-IP Address: [Exact IP from DB]
-Konfigurasi:
-[Raw CLI command 1]
-[Raw CLI command 2]
+- Never execute automatically.
+- Only output [GENERATE_CONFIG] if user confirms briefly:
+ya/gas/execute/run
+
+- Always use [READ_DEVICE] for live device checks.
+- Reject unrelated topics.
+
+If rejecting:
+"Maaf, saya hanya membantu konfigurasi jaringan, topologi, dan manajemen perangkat."
 """
 
 # ==============================================================================
@@ -254,7 +295,7 @@ class ChatView(APIView):
               
               proses_1_reply = call_groq_llm(
                   api_key=api_key, 
-                  model="openai/gpt-oss-120b", #openai/gpt-oss-120b #llama-3.3-70b-versatile
+                  model="llama-3.3-70b-versatile", #openai/gpt-oss-120b #llama-3.3-70b-versatile
                   messages=messages_for_llm,
                   temperature = 0.1
               )
@@ -269,47 +310,57 @@ class ChatView(APIView):
               chat.topology_data = proses_1_reply
               chat.save()
               print("Memori topologi berhasil dikunci untuk Room ini.")
-          # =================================================================
-          # ROUTING INTENT (Menjalankan Aksi Sesuai Tag dari Agen 1)
-          # =================================================================
-          clean_reply = proses_1_reply.replace("\\", "").replace("`", "").replace("*", "").replace("Read:", "")
-
-          is_short_confirm = len(user_message.strip()) <= 10
-          
-          if "[GENERATE_CONFIG]" in clean_reply and is_short_confirm:
-              print(" User Setuju. Proses 2 (Configurator) Mengambil Alih...")
-
-
-              last_preview = ""
-              for m in reversed(history):
-                  if m.role == "assistant" and "Execute this now?" in m.content:
-                      last_preview = m.content
-                      break
               
-              if not last_preview:
-                  for m in reversed(history):
-                      if m.role == "assistant":
-                          last_preview = m.content
-                          break
+          # =================================================================
+          # ROUTING INTENT
+          # =================================================================
+          clean_reply = proses_1_reply.strip()
+          confirm_words = [
+              "ya",
+              "y",
+              "yes",
+              "gas",
+              "run",
+              "execute",
+              "lanjut",
+              "oke",
+              "ok",
+              "apply"
+          ]
+        
+          is_short_confirm = (
+              user_message.strip().lower() in confirm_words
+          )
+        
+          if clean_reply == "[GENERATE_CONFIG]" and is_short_confirm:
+                print("User Setuju. Configurator Mengambil Alih...")
+                last_preview = ""
+            
+                for m in reversed(history):
+                    if (
+                        m.role == "assistant" 
+                        and m.content
+                        and "Execute this now?" in m.content
+                        ):
+                        last_preview = m.content
+                        break
+            
+                if not last_preview:
+                    final_bot_reply = "Preview konfigurasi tidak ditemukan."
 
-              messages_for_proses_2 = [
-                  {"role": "system", "content": PROSES_2_PROMPT + f"\nContext Database:\n{device_context}\n\nCRITICAL OVERRIDE: You are a DUMB TEXT PARSER, not a network designer. DO NOT invent, add, or optimize any commands. DO NOT add 'undo shutdown', IPs, or bridge filters unless they are EXPLICITLY written in the preview."},
-                  {"role": "user", "content": f"Convert this EXACT preview block into the REQUIRED FORMAT (Target, IP, Konfigurasi):\n\n{last_preview}"}
-              ]
-              
+            
+                final_bot_reply = configurator(
+                    last_preview,
+                    device_context
+                )
 
-              final_bot_reply = call_groq_llm(
-                  api_key=api_key, 
-                  model="llama-3.3-70b-versatile", 
-                  messages=messages_for_proses_2
-              )
 
-          elif "[GENERATE_CONFIG]" in clean_reply and not is_short_confirm:
-              print(" Memblokir eksekusi otomatis karena prompt user panjang.")
-              final_bot_reply = final_bot_reply.replace("[GENERATE_CONFIG]", "").replace("`", "")
+          elif clean_reply == "[GENERATE_CONFIG]" and not is_short_confirm:        
+              print("Memblokir eksekusi otomatis karena prompt user panjang.")        
+              final_bot_reply = ("Eksekusi dibatalkan karena konfirmasi tidak valid.")
 
          # Membaca status/konfigurasi perangkat jaringan
-          elif "[READ_DEVICE]" in clean_reply:
+          elif clean_reply.startswith("[READ_DEVICE]"):
               print("Membaca status perangkat...")
               try:
                   # Parsing
@@ -322,7 +373,9 @@ class ChatView(APIView):
 
                       t0_ansible = time.time()
                       # Memanggil fungsi eksekutor Ansible Read
-                      ansible_output = execute_read_device(target_device, target_command)
+                      ansible_output = execute_read_device(
+                          target_device, 
+                          target_command)
 
                       ansible_time += (time.time() - t0_ansible)
                       
@@ -331,18 +384,22 @@ class ChatView(APIView):
                       else:
                           print(" Memformat output raw menjadi rapi...")
                           format_messages = [
-                              {"role": "system", "content": (
-                                  "Format raw network CLI output. RULES:\n"
-                                  "1. Multi-column/list -> valid Markdown table (infer native headers).\n"
-                                  "2. Short/single-line/key-value -> `text` code block (NO tables).\n"
-                                  "3. Strip legends/flags (e.g., 'Flags: X...').\n"
-                                  "4. Output ONLY the final table or code block. Zero conversational filler."
-                              )},
+                              {"role": "system", 
+                               "content": (
+                                      "Format raw network CLI output.\n"
+                                      "1. Multi-column/list -> Markdown table.\n"
+                                      "2. Single-line -> text block.\n"
+                                      "3. Output ONLY formatted result."
+                                  )
+                              },
                               {"role": "user", "content": ansible_output}
                           ]
                           
                           try:
-                              table_output = call_groq_llm(api_key, "llama-3.1-8b-instant", format_messages, temperature=0.1)
+                              table_output = call_groq_llm(api_key, 
+                                                           "llama-3.1-8b-instant", 
+                                                           format_messages, 
+                                                           temperature=0.1)
                               
                               final_bot_reply = (
                                   f" **Data Perangkat {target_device}**\n"
@@ -363,16 +420,19 @@ class ChatView(APIView):
           
   
           # Menambahkan perangkat baru ke DB
-          elif "[ADD_DEVICE_TO_DB]" in clean_reply:
+          elif clean_reply.startswith("[ADD_DEVICE_TO_DB]"):
                 print("Menambahkan perangkat ke DB...")
                 try:
-                    parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
-                    bot_text = parts[0].strip()
+                    parts = clean_reply.split("[ADD_DEVICE_TO_DB]")
                     raw_json_str = parts[1].strip()
                     
-                    json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
+                    json_match = re.search(
+                        r'\{.*\}', 
+                        raw_json_str, 
+                        re.DOTALL)
+                    
                     if not json_match:
-                        raise ValueError("Format JSON dari asisten tidak ditemukan.")
+                        raise ValueError("Format JSON tidak ditemukan.")
                     
                     clean_json = json_match.group(0)
                     device_data = json.loads(clean_json)
@@ -391,45 +451,39 @@ class ChatView(APIView):
                         }
                     )
                     
-                    final_bot_reply = bot_text + "\n\n **Berhasil:** Perangkat telah ditambahkan ke database!"
+                    final_bot_reply = ("Berhasil: perangkat ditambahkan ke database.")
+                    
                 except Exception as e:
-                    error_msg = str(e)
-                    print(f"Gagal menyimpan perangkat: {error_msg}")
-                    final_bot_reply = proses_1_reply.split("[ADD_DEVICE_TO_DB]")[0].strip() + f"\n\n**Gagal:** Sistem tidak dapat menyimpan perangkat. (Error: {error_msg})"
-
-
+                    final_bot_reply = (f"Gagal menyimpan perangkat: {str(e)}")
 
           # Menghapus Perangkat  
-          elif "[DELETE_DEVICE_FROM_DB]" in clean_reply:
+          elif clean_reply.startswith("[DELETE_DEVICE_FROM_DB]"):
                 print("Menghapus perangkat dari DB...")
-                import re
                 try:
-                    parts = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")
-                    bot_text = parts[0].strip()
+                    parts = clean_reply.split("[DELETE_DEVICE_FROM_DB]")
                     raw_json_str = parts[1].strip()
                     
-                    json_match = re.search(r'\{.*\}', raw_json_str, re.DOTALL)
+                    json_match = re.search(
+                        r'\{.*\}', 
+                        raw_json_str, 
+                        re.DOTALL)
+                    
                     if not json_match:
-                        raise ValueError("Format JSON dari asisten tidak ditemukan.")
+                        raise ValueError("Format JSON tidak ditemukan.")
                     
                     clean_json = json_match.group(0)
                     device_data = json.loads(clean_json)
-                    
-                    device_name = device_data.get("name", "").strip()
-                    print(f"DEBUG: Mencari perangkat dengan nama persis: '{device_name}'")
-                    
-                    deleted_count, _ = NetworkDevice.objects.filter(name__iexact=device_name).delete()
-                    print(f"DEBUG: Jumlah perangkat yang terhapus: {deleted_count}")
+                    device_name = device_data.get("name", "").strip()   
+                    deleted_count, _ = (
+                        NetworkDevice.objects.filter(name__iexact=device_name).delete())
                     
                     if deleted_count > 0:
-                        final_bot_reply = bot_text + f"\n\n **Berhasil:** Perangkat '{device_name}' telah dihapus dari database."
+                        final_bot_reply = (f"\n\n **Berhasil:** Perangkat '{device_name}' telah dihapus dari database.")
                     else:
-                        final_bot_reply = bot_text + f"\n\n **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Pastikan namanya diketik dengan benar."
+                        final_bot_reply = (f"\n\n **Perhatian:** Perangkat '{device_name}' tidak ditemukan di database. Pastikan namanya diketik dengan benar.")
                         
                 except Exception as e:
-                    error_msg = str(e)
-                    print(f"Gagal menghapus perangkat: {error_msg}")
-                    final_bot_reply = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")[0].strip() + f"\n\n**Gagal:** Sistem tidak dapat menghapus perangkat. (Error: {error_msg})"
+                    final_bot_reply = (f"Gagal menghapus perangkat: {str(e)}")
           
           # Penyimpanan Pesan ke DB dan Pemrosesan Respons Final
           Message.objects.create(chat=chat, role="assistant", content=final_bot_reply)
