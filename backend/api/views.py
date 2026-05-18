@@ -365,7 +365,6 @@ class ChatView(APIView):
           # Menambahkan perangkat baru ke DB
           elif "[ADD_DEVICE_TO_DB]" in clean_reply:
                 print("Menambahkan perangkat ke DB...")
-                import re 
                 try:
                     parts = proses_1_reply.split("[ADD_DEVICE_TO_DB]")
                     bot_text = parts[0].strip()
