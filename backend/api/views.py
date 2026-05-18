@@ -59,16 +59,25 @@ def get_dynamic_templates(user_prompt):
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
 # ==============================================================================
-def sanitize_mermaid(text):
-    import re
+# ==============================================================================
+# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
+# ==============================================================================
+def sanitize_mermaid(text):    
+    mermaid_match = re.search(r'```mermaid\n(.*?)```', text, re.DOTALL)
+    
+    if not mermaid_match:
+        return text 
+        
+    mermaid_block = mermaid_match.group(1)
+    
     def fix_newlines(match):
         inner = match.group(1).replace('\n', '<br>').replace('\\n', '<br>')
         return f'[{inner}]'
         
-    text = re.sub(r'\[(.*?)\]', fix_newlines, text, flags=re.DOTALL)
+    mermaid_block = re.sub(r'\[(.*?)\]', fix_newlines, mermaid_block, flags=re.DOTALL)
 
     cleaned_lines = []
-    for line in text.split('\n'):
+    for line in mermaid_block.split('\n'):
         
         def clean_node(match):
             node_id = match.group(1).strip()
@@ -91,10 +100,11 @@ def sanitize_mermaid(text):
         
         cleaned_lines.append(line)
         
-    return '\n'.join(cleaned_lines)
-
-
-
+    cleaned_mermaid = '\n'.join(cleaned_lines)
+    
+    final_text = text.replace(mermaid_match.group(1), cleaned_mermaid)
+    
+    return final_text
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
