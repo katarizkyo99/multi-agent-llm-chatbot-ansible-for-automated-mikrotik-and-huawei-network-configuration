@@ -136,15 +136,18 @@ HUAWEI_DHCP_TEMPLATE = """
 """
 
 MIKROTIK_OSPF_TEMPLATE = """
-[MIKROTIK OSPF (STRICT)]
-- Pay attention to the SPACE after 'set' and INSIDE the brackets. NEVER use quotes inside the find block.
-  - IF AREA 0 / BACKBONE:
-    1) INSTANCE: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`.
-    2) AREA: `/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
-  - IF NON-BACKBONE AREA:
-    1) INSTANCE: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
-    2) AREA: `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
-  - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
+[MIKROTIK OSPF (CRITICAL SYNTAX RULES)]
+- CRITICAL: You MUST write the 'find' command EXACTLY with a space BEFORE the bracket and NO QUOTES inside the bracket.
+- CORRECT: `set [find name=default]`
+- WRONG: `set["find name=default"]` (NEVER DO THIS)
+
+- IF AREA 0 / BACKBONE:
+  1) INSTANCE: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+  2) AREA: `/routing ospf area set [find name=backbone or area-id=0.0.0.0] instance=<NAME>`
+- IF NON-BACKBONE AREA:
+  1) INSTANCE: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
+  2) AREA: `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
+- NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
 """
 
 MIKROTIK_DHCP_TEMPLATE = """
