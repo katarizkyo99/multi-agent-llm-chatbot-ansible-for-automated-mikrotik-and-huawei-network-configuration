@@ -97,9 +97,6 @@ def sanitize_mermaid(text):
 # ==============================================================================
 # SYSTEM PROMPTS 
 # ==============================================================================
-# ==============================================================================
-# SYSTEM PROMPTS & DYNAMIC TEMPLATES
-# ==============================================================================
 SHARED_VENDOR_RULES = """
 [GLOBAL]
 - NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
@@ -124,7 +121,9 @@ SHARED_VENDOR_RULES = """
 - NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
 """
 
-# --- DYNAMIC TEMPLATES ---
+# ==============================================================================
+# DYNAMIC TEMPLATES
+# ==============================================================================
 HUAWEI_OSPF_TEMPLATE = """
 [HUAWEI OSPF]
 - 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
@@ -156,6 +155,7 @@ MIKROTIK_NAT_TEMPLATE = """
 [MIKROTIK NAT]
 - ONLY execute if requested. CMD: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
+# =======================================================================================================================
 
 PROSES_1_PROMPT = """
 Role: NetArch. Speak friendly ID. Concise.
