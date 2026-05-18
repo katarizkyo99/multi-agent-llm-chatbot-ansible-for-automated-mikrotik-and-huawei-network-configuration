@@ -160,20 +160,21 @@ HUAWEI_DHCP_TEMPLATE = """
 """
 
 MIKROTIK_OSPF_TEMPLATE = """
-[MIKROTIK OSPF (CRITICAL SYNTAX RULES)]
-- CRITICAL: You MUST write the 'find' command EXACTLY with a space BEFORE the bracket and NO QUOTES inside the bracket.
+[MIKROTIK OSPF (CRITICAL SYNTAX & LOGIC RULES)]
 - CRITICAL LITERAL: The exact string `[find name=default or name=ospf-1]` MUST be copied word-for-word. DO NOT shorten or simplify it.
+- AREA 0 PRIORITY: If the user requests Area 0 or Backbone, you MUST hijack the default setup using `set`. NEVER use `add` for Area 0, EVEN IF the user provides a custom instance name!
 
-CORRECT: `set [find name=default or name=ospf-1]`
-WRONG: `set [find name=default]` (DO NOT SIMPLIFY)
-WRONG: `set["find name=default"]`
+CORRECT BACKBONE (Area 0): 
+`/routing ospf instance set [find name=default or name=ospf-1] name=ujicoba router-id=2.2.2.2 distribute-default=always-as-type-1`
+`/routing ospf area set [find name=backbone or area-id=0.0.0.0] instance=ujicoba`
 
-- IF AREA 0 / BACKBONE:
-  1) INSTANCE: `/routing ospf instance set [find name=default or name=ospf-1] name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
-  2) AREA: `/routing ospf area set [find name=backbone or area-id=0.0.0.0] instance=<NAME>`
-- IF NON-BACKBONE AREA:
+WRONG BACKBONE (NEVER DO THIS): 
+`/routing ospf instance add name=ujicoba...` (DO NOT USE 'add' for Area 0)
+
+- IF NON-BACKBONE AREA (e.g., Area 10, Area 20):
   1) INSTANCE: `/routing ospf instance add name=<NAME> router-id=<ip> distribute-default=always-as-type-1`
   2) AREA: `/routing ospf area add name=area<id> area-id=<id> instance=<NAME>`
+
 - NET: `/routing ospf network add network=<net> area=<NAME_USED_ABOVE>`
 """
 
