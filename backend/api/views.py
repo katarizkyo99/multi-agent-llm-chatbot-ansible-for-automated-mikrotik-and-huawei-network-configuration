@@ -166,7 +166,7 @@ MIKROTIK_OSPF_TEMPLATE = """
 
 CORRECT BACKBONE (Area 0): 
 `/routing ospf instance set [find name=default or name=ospf-1] name=ujicoba router-id=2.2.2.2 distribute-default=always-as-type-1`
-`/routing ospf area set [find name=backbone or area-id=0.0.0.0] instance=ujicoba`
+`/routing ospf area set [find name="backbone" or area-id="0.0.0.0"] instance=<NAME>`
 
 WRONG BACKBONE (NEVER DO THIS): 
 `/routing ospf instance add name=ujicoba...` (DO NOT USE 'add' for Area 0)
