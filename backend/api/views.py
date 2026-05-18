@@ -137,8 +137,21 @@ SHARED_VENDOR_RULES = """
 # DYNAMIC TEMPLATES
 # ==============================================================================
 HUAWEI_OSPF_TEMPLATE = """
-[HUAWEI OSPF]
-- 1-line init (`ospf <PID> router-id <ip>`). Enter `area <id>`, use WILDCARD mask for `network`. Use `quit` to exit.
+[HUAWEI OSPF (CRITICAL STRICT RULES)]
+- NO TERMINAL PROMPTS: NEVER output brackets indicating terminal views like `[ospf 1]` or `<Huawei>`. Output ONLY the raw commands.
+- WILDCARD MASK MANDATORY: NEVER use CIDR notation (like `/24` or `/30`) in Huawei OSPF network commands. You MUST convert it to a wildcard mask (e.g., `0.0.0.255` or `0.0.0.3`).
+
+CORRECT EXAMPLE:
+ospf 1 router-id 3.3.3.3
+area 0
+network 192.168.20.0 0.0.0.255
+network 10.10.12.0 0.0.0.3
+quit
+quit
+
+WRONG EXAMPLE (NEVER DO THIS):
+[ospf 1] router-id 3.3.3.3
+network 192.168.20.0/24
 """
 
 HUAWEI_DHCP_TEMPLATE = """
