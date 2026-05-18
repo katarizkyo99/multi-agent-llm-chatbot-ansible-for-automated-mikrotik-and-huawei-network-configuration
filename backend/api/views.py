@@ -9,6 +9,7 @@ import subprocess
 import re
 import time
 from django.http import JsonResponse
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from .models import Chat, Message, RiwayatKonfigurasi, NetworkDevice, DeviceAlias
 
@@ -164,6 +165,16 @@ RULES:
 """ + SHARED_VENDOR_RULES + """
 {DYNAMIC_TEMPLATES}
 
+[CURRENT STATE MEMORY]
+1. TOPOLOGY:
+{memori_topologi}
+
+2. LATEST PREVIEW:
+{memori_preview}
+
+3. LATEST EXECUTION RESULT:
+{memori_eksekusi}
+
 ACTIONS:
 1. Mermaid `graph TD`: 1-line format `A["Name<br>IP"] -->|Port| B["Name<br>IP"]`. Edge label=1 word max. NO IPs/spaces/<br> on edges.
 2. DB Add: `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","user":"","pass":"","vendor":""}`
@@ -252,12 +263,30 @@ class ChatView(APIView):
       for d in devices:
           device_context += f"| {d.name} | {d.host} | {d.vendor} |\n"
 
-      memori_topologi = f"\n\n[TOPOLOGI ROOM INI]:\n{chat.topology_data}\n(Use the IP and Interface data from the text above for configuration. DO NOT ask the user again.)" if chat.topology_data else ""
-      dynamic_rules = get_dynamic_templates(user_message)
+      # Ekstraksi "State Memory" (Topologi, Preview, Eksekusi)
+      memori_topologi = chat.topology_data if chat.topology_data else "Belum ada topologi. Analisis gambar/teks untuk memetakan."
       
+      last_preview_msg = Message.objects.filter(
+          chat=chat, role="assistant", content__icontains="Execute this now?"
+      ).order_by("-timestamp").first()
+      memori_preview = last_preview_msg.content if last_preview_msg else "Belum ada draf konfigurasi (Preview)."
+
+      # Cari EKSEKUSI terakhir (ciri: respons hasil eksekusi Ansible dari Agen)
+      last_exec_msg = Message.objects.filter(
+          chat=chat, role="assistant"
+      ).filter(
+          Q(content__icontains="**Berhasil:**") | Q(content__icontains="**Gagal:**") | Q(content__icontains="Detail Kegagalan:")
+      ).order_by("-timestamp").first()
+      memori_eksekusi = last_exec_msg.content if last_exec_msg else "Belum ada eksekusi konfigurasi sebelumnya."
+
+
+      dynamic_rules = get_dynamic_templates(user_message)
+
       formatted_proses_1_prompt = PROSES_1_PROMPT.replace("{device_context}", device_context)
       formatted_proses_1_prompt = formatted_proses_1_prompt.replace("{DYNAMIC_TEMPLATES}", dynamic_rules)
-      formatted_proses_1_prompt = formatted_proses_1_prompt + memori_topologi
+      formatted_proses_1_prompt = formatted_proses_1_prompt.replace("{memori_topologi}", memori_topologi)
+      formatted_proses_1_prompt = formatted_proses_1_prompt.replace("{memori_preview}", memori_preview)
+      formatted_proses_1_prompt = formatted_proses_1_prompt.replace("{memori_eksekusi}", memori_eksekusi)
   
       # Mengambil 6 pesan terakhir untuk konteks LLM
       raw_history = Message.objects.filter(chat=chat).order_by("timestamp")
