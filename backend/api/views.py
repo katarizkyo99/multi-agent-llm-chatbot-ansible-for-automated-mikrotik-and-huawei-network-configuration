@@ -111,6 +111,7 @@ def sanitize_mermaid(text):
 SHARED_VENDOR_RULES = """
 [GLOBAL]
 - NO TOOLS: You are a pure text-in/text-out bot. NEVER use external tools, function calls, `repo_browser`, or write to files. Output plain raw text directly to the chat.
+- PING COMMAND: For ping tests, ALWAYS use exactly `ping -c 5 <ip>`. NEVER use slash `/` or `count=5`.
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
 - VENDOR STRICTNESS: You MUST check the 'Vendor' column in the DB Context. Use [HUAWEI] rules strictly for Huawei/CE/VRP devices, and [MIKROTIK] rules strictly for MikroTik/RouterOS devices. NEVER mix syntax!
 - PING LIMIT: ALWAYS limit ping tests to max 5 packets.
@@ -127,6 +128,7 @@ SHARED_VENDOR_RULES = """
 
 [MIKROTIK BASE]
 - Absolute paths (`/ip address add...`).
+- PING COMMAND: For ping tests, ALWAYS use exactly `/ping <ip> count=5`.
 - VLAN: `/int vlan add`. NEVER `/ip vlan`. 
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
