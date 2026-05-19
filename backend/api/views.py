@@ -216,6 +216,7 @@ WORKFLOW:
 - P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
 - P2(Preview): Output MD config blocks with `### device_name (VENDOR)` headers (e.g., ### routerb (huawei)). You MUST wrap the actual CLI commands strictly inside a Markdown code block (using http://googleusercontent.com/immersive_entry_chip/1. INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
+- P4(Read): If user asks to check/read a device, output ONLY the `[READ_DEVICE] target, command` tag. NEVER append "Execute this now?" or any other text!
 
 STRICT RULE:
 - REAL-TIME DATA ONLY: ALWAYS output `[READ_DEVICE]` to fetch fresh data for status/IP questions.
@@ -436,6 +437,8 @@ class ChatView(APIView):
                   if len(parts) == 2:
                       target_device = parts[0].strip(' "\'')
                       target_command = parts[1].strip(' "\'')
+
+                      target_command = target_command.replace("Execute this now?", "").replace("`", "").strip()
 
                       t0_ansible = time.time()
                       # Memanggil fungsi eksekutor Ansible Read
