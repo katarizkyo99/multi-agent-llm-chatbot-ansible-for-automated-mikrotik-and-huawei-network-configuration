@@ -49,7 +49,16 @@ const MessageBubble = ({ message, BASE_URL }) => {
                                     }
                                     
                                     return (
-                                        <div className="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto max-w-full mt-2 font-mono text-sm whitespace-pre-wrap break-all w-full block">
+                                        <div 
+                                            className="bg-gray-900 text-green-400 p-4 rounded-xl font-mono text-sm whitespace-pre-wrap break-all w-full clear-both block"
+                                            style={{ 
+                                                height: 'auto !important', 
+                                                minHeight: '120px',
+                                                overflow: 'visible !important',
+                                                display: 'block'
+                                            }}
+                                            {...props}
+                                        >
                                             {children}
                                         </div>
                                     );
