@@ -721,12 +721,12 @@ def delete_all_riwayat(request):
 def execute_config(request):
     try:
         print("=== RAW REQUEST DATA ===", request.data)
-        # Parsing Input dari Frontend untuk Memisahkan mana yang "Target" dan mana yang "Konfigurasi"
         raw = request.data.get("config_cli", "")
         tasks = [] 
         
         current_target = None
         current_config = []
+
 
         lines = raw.splitlines()
         
@@ -734,21 +734,22 @@ def execute_config(request):
             line = line.strip()
             if not line: continue 
 
-            if "execute this now?" in line.lower():
-                continue
-
             if line.lower().startswith("target:"):
                 if current_target and current_config:
-                    tasks.append({
-                        "target": current_target,
-                        "config": "\n".join(current_config)
-                    })
-                    current_config = [] 
+                    while current_config and "execute this now" in current_config[-1].lower():
+                        current_config.pop()
+                    
+                    if current_config:
+                        tasks.append({
+                            "target": current_target,
+                            "config": "\n".join(current_config).strip()
+                        })
+                current_config = [] 
                 current_target = line.split(":", 1)[1].strip().rstrip(",")
-
+            
             elif line.lower().startswith("konfigurasi:"):
                 content = line.split(":", 1)[1].strip()
-                if content and "execute this now?" not in content.lower():
+                if content and "execute this now" not in content.lower():
                     current_config.append(content)
             
             else:
@@ -756,11 +757,15 @@ def execute_config(request):
                     current_config.append(line)
 
         if current_target and current_config:
-            tasks.append({
-                "target": current_target,
-                "config": "\n".join(current_config)
-            })
-
+            while current_config and "execute this now" in current_config[-1].lower():
+                current_config.pop()
+                
+            if current_config:
+                tasks.append({
+                    "target": current_target,
+                    "config": "\n".join(current_config).strip()
+                })
+        
         print(f"Ditemukan {len(tasks)} tugas konfigurasi.")
 
         if not tasks:
