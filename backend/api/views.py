@@ -734,6 +734,9 @@ def execute_config(request):
             line = line.strip()
             if not line: continue 
 
+            if "execute this now?" in line.lower():
+                continue
+
             if line.lower().startswith("target:"):
                 if current_target and current_config:
                     tasks.append({
@@ -742,10 +745,10 @@ def execute_config(request):
                     })
                     current_config = [] 
                 current_target = line.split(":", 1)[1].strip().rstrip(",")
-            
+
             elif line.lower().startswith("konfigurasi:"):
                 content = line.split(":", 1)[1].strip()
-                if content:
+                if content and "execute this now?" not in content.lower():
                     current_config.append(content)
             
             else:
