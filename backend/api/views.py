@@ -447,9 +447,26 @@ class ChatView(APIView):
                       ansible_output = execute_read_device(target_device, target_command)
 
                       ansible_time += (time.time() - t0_ansible)
-                      
-                      if "❌" in ansible_output or "Gagal" in ansible_output:
-                          final_bot_reply = ansible_output
+
+
+                      router_errors = [
+                          "unrecognized command", "bad command", "syntax error", 
+                          "parameter error", "incomplete command", "failure:", 
+                          "error:", "wrong parameter"
+                      ]
+                      is_error = (
+                          "❌" in ansible_output or 
+                          "gagal" in ansible_output.lower() or 
+                          any(err in ansible_output.lower() for err in router_errors)
+                      )
+
+                      if is_error:
+                          print(" Perangkat mengembalikan error. Bypass formatting LLM!")
+                          final_bot_reply = (
+                              f"⚠️ **Gagal mengeksekusi perintah pada {target_device}:** Perangkat mengembalikan respons error.\n\n"
+                              f"```text\n{ansible_output}\n```"
+                          )
+
                       else:
                           print(" Memformat output raw menjadi rapi...")
                           format_messages = [
