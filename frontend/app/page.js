@@ -338,11 +338,17 @@ export default function Home() {
                 fetchNetworkUsers(); 
             }
 
+
             // Jika sistem mendeteksi niat eksekusi akan muncul pop-up konfirmasi
             if (botReply.includes("Target:") && botReply.includes("Konfigurasi:")) {
-                setPendingConfig(botReply);
+                const cleanedConfigForPopup = botReply
+                    .replace(/Execute this now\?/gi, "")
+                    .trim();
+
+                setPendingConfig(cleanedConfigForPopup);
                 setShowConfirmPopup(true);
             }
+
 
         } catch (error) {
             setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: [...(c.messages || []), { role: "bot", text: `❌ Error: ${error.message}` }] } : c));
