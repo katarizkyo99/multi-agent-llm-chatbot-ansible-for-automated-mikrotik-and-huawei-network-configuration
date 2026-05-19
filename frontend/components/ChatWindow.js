@@ -49,9 +49,9 @@ const MessageBubble = ({ message, BASE_URL }) => {
                                     }
                                     
                                     return (
-                                        <pre className="bg-gray-900 text-green-400 p-3 rounded-xl overflow-x-auto max-w-full mt-2" {...props}>
+                                        <div className="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto max-w-full mt-2 font-mono text-sm whitespace-pre-wrap break-all w-full block">
                                             {children}
-                                        </pre>
+                                        </div>
                                     );
                                 },
 
