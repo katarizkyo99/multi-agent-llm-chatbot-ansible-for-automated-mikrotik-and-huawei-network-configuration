@@ -122,7 +122,7 @@ SHARED_VENDOR_RULES = """
 - UP PORT: 'undo shutdown'. NO 'portswitch'.
 - CREATION: Global VLAN first. 
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
-- OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>', and 'stp disable'.
+- OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
 - SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
 
