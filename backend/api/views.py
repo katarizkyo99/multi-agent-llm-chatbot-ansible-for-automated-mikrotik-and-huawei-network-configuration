@@ -120,7 +120,8 @@ SHARED_VENDOR_RULES = """
 - NO 'system-view','return','!'. USE 'quit' to exit views.
 - PING COMMAND: For ping tests, ALWAYS use exactly `ping -c 5 <ip>`. NEVER use slash `/` or `count=3`.
 - UP PORT: 'undo shutdown'. NO 'portswitch'.
-- CREATION: Global VLAN first. 
+- PORT ACCESS ASSIGNMENT: If the user asks to add/assign an existing vlan to a specific interface, DO NOT create the global VLAN (DO NOT output `vlan <id>` and `quit` at the beginning). Directly entry the interface view using `interface <name>`.
+- TRUNK CONFIG: If user asks to configure trunk or vlan tagging trunk on an interface, USE EXACT SEQ: 1) `interface <interface_name>` 2) `port link-type trunk` 3) `port trunk allow-pass vlan <vlan_id>` 4) `quit`. NEVER use `display` commands for config intent!
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
 - OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
