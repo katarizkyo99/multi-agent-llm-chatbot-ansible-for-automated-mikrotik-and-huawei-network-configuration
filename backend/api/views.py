@@ -114,14 +114,14 @@ SHARED_VENDOR_RULES = """
 - TOPOLOGY AWARENESS: Map configs STRICTLY to topology. No blind applying to all devices.
 - VENDOR STRICTNESS: You MUST check the 'Vendor' column in the DB Context. Use [HUAWEI] rules strictly for Huawei/CE/VRP devices, and [MIKROTIK] rules strictly for MikroTik/RouterOS devices. NEVER mix syntax!
 - PING LIMIT: ALWAYS limit ping tests to max 3 packets.
-- STRICT OUTPUT: Output CLI commands directly. NO conversational filler (e.g., "Here is the config"). The ONLY allowed conversational text is EXACTLY "Execute this now?" at the very end of your preview.
+- STRICT OUTPUT: Output CLI commands directly. NO conversational filler. The ONLY allowed conversational text is EXACTLY "Execute this now?" at the very end of your preview.
 
 [HUAWEI BASE]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
 - PING COMMAND: For ping tests, ALWAYS use exactly `ping -c 5 <ip>`. NEVER use slash `/` or `count=3`.
 - UP PORT: 'undo shutdown'. NO 'portswitch'.
-- PORT ACCESS ASSIGNMENT: If the user asks to add/assign an existing vlan to a specific interface, DO NOT create the global VLAN (DO NOT output `vlan <id>` and `quit` at the beginning). Directly entry the interface view using `interface <name>`.
-- TRUNK CONFIG: If user asks to configure trunk or vlan tagging trunk on an interface, USE EXACT SEQ: 1) `interface <interface_name>` 2) `port link-type trunk` 3) `port trunk allow-pass vlan <vlan_id>` 4) `quit`. NEVER use `display` commands for config intent!
+- PORT ACCESS ASSIGNMENT: DO NOT create the global VLAN at the beginning if just assigning. Directly entry the interface view using `interface <name>`.
+- TRUNK CONFIG: EXACT SEQ: 1) `interface <name>` 2) `port link-type trunk` 3) `port trunk allow-pass vlan <id>` 4) `quit`. NEVER use `display`.
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
 - OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
@@ -130,12 +130,11 @@ SHARED_VENDOR_RULES = """
 [MIKROTIK BASE]
 - Absolute paths (`/ip address add...`).
 - PING COMMAND: For ping tests, ALWAYS use exactly `/ping <ip> count=3`.
-- VLAN: `/int vlan add`. NEVER `/ip vlan`. 
+- IP & VLAN SEPARATION (CRITICAL): NEVER combine VLAN creation and IP assignment. EXACT SEQ: 1) `/interface vlan add name=<name> interface=<if> vlan-id=<id>` 2) `/ip address add address=<ip/mask> interface=<name>`.
 - DEL: Inline find NO quotes (`... remove [find address="1.1.1.1/24"]`). NO `["find..."]`.
 - SCOPE: ONLY VLAN/IP. NO L2 (bridge/switch). Decline if asked.
 - NO BRIDGE: NEVER guess/invent `bridge` interfaces. ASK user if physical interface is missing.
 """
-
 # ==============================================================================
 # DYNAMIC TEMPLATES
 # ==============================================================================
@@ -216,7 +215,8 @@ ACTIONS:
 
 WORKFLOW:
 - P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
-- P2(Preview): Output MD config blocks with `### device_name (VENDOR)` headers (e.g., ### routerb (huawei)). You MUST wrap the actual CLI commands strictly inside a Markdown code block (using http://googleusercontent.com/immersive_entry_chip/1. INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
+- P2(Preview): You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using ```text \n commands \n 
+```). INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
 - P4(Read): If user asks to check/read a device, output ONLY the `[READ_DEVICE] target, command` tag. NEVER append "Execute this now?" or any other text!
 
