@@ -143,6 +143,7 @@ HUAWEI_OSPF_TEMPLATE = """
 [HUAWEI OSPF (CRITICAL STRICT RULES)]
 - NO TERMINAL PROMPTS: NEVER output brackets indicating terminal views like `[ospf 1]` or `<Huawei>`. Output ONLY the raw commands.
 - ONE-LINER OSPF CREATION: You MUST always initialize OSPF and Router-ID in a single line. EXACT FORMAT: `ospf <PID> router-id <ip>`.
+- MANDATORY AREA VIEW: You CANNOT inject `network` commands directly under the OSPF daemon view. You MUST explicitly enter an area first by outputting `area 0` (or the requested area ID) BEFORE listing any network commands.
 - WILDCARD MASK MANDATORY: NEVER use CIDR notation (like `/24` or `/30`) in Huawei OSPF network commands. You MUST convert it to a wildcard mask (e.g., `0.0.0.255` or `0.0.0.3`).
 
 CORRECT EXAMPLE:
