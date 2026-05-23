@@ -984,34 +984,70 @@ def execute_config(request):
                 feedback_msg = f"Konfigurasi berhasil diterapkan ke perangkat {final_target_name}!"
                 status_flag = "success"
                 error_title = ""
+                detail_block = ""
 
                 syntax_errors = [
                     "unrecognized command", "bad command", "syntax error", "input does not match",
                     "expected end of command", "expected command name", "failure:", "invalid",
-                    "duplicate item name", "unknown error", "no such item", "incomplete command"
+                    "duplicate item name", "unknown error", "no such item", "incomplete command",
+                    "wrong parameter"
                 ]
 
-                if "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
+                # Token deteksi transport khusus driver SSH Huawei/MikroTik di Ansible
+                ssh_auth_tokens = [
+                    "authentication failed", "permission denied", "auth failed", 
+                    "invalid username or password", "unable to decode json", "received 'none'"
+                ]
+
+                # Error Autentikasi
+                if any(x in combined_log for x in ssh_auth_tokens):
+                    error_title = "Autentikasi ditolak atau sesi SSH gagal. Silakan periksa kembali Username dan Password perangkat di Database."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`Kredensial salah atau koneksi ditolak sebelum sesi CLI terbuka.`"
+
+                elif "unreachable=" in stdout_text_lower and not "unreachable=0" in stdout_text_lower:
                     error_title = "Tidak dapat menghubungi perangkat (Timeout/Unreachable)."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`Koneksi jaringan fisik ke IP perangkat terputus.`"
+
                 elif "timed out" in combined_log or "timeout" in combined_log:
                     error_title = "Koneksi SSH ke perangkat terputus (Timeout)."
-                elif any(x in combined_log for x in ["authentication failed", "permission denied", "auth failed"]):
-                    error_title = "Autentikasi ditolak. Cek Username dan Password di Database."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`RTO (Request Time Out) saat mencoba jabat tangan SSH.`"
+
+                # Error Logika Jaringan
                 elif "conflicts with another address" in combined_log or "already have such address" in combined_log:
                     conflict_int = ""
                     find_int = re.search(r'\[(.*?)\]', combined_log)
                     if find_int:
                         conflict_int = f" di antarmuka **{find_int.group(1)}**"
                     error_title = f"IP Address sudah terpasang atau bentrok (Conflict){conflict_int}."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`IP parameter sudah dialokasikan di interface lain.`"
+
+                # Error Sintaks CLI
                 elif any(x in combined_log for x in syntax_errors):
                     error_title = "Terdapat sintaks perintah yang tidak valid atau antarmuka tidak ditemukan."
+                    
+                    failed_command = "Tidak terdeteksi"
+                    if "command:" in combined_log.lower():
+                        match_cmd = re.search(r"(?:command|Command):\s*([^,\n\r]+)", combined_log)
+                        if match_cmd:
+                            failed_command = match_cmd.group(1).replace('\\"', '"').replace('"', '').strip()
+                    elif "item=" in combined_log.lower():
+                        match_cmd = re.search(r"item=\s*([^)\n\r]+)", combined_log)
+                        if match_cmd:
+                            failed_command = match_cmd.group(1).strip()
+
+                    detail_block = f"\n\n**Baris Perintah yang Salah:**\n`{failed_command}`\n\n**Detail Log Perangkat:**\n`{error_title}`"
+
                 elif "ignored=" in stdout_text_lower and not "ignored=0" in stdout_text_lower:
                     error_title = "Sebagian perintah tidak dikenali dan diabaikan oleh perangkat."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`Perangkat mengabaikan tugas karena adanya ketidaksesuaian.`"
+
                 elif "failed=" in stdout_text_lower and not "failed=0" in stdout_text_lower:
                     error_title = "Terjadi kegagalan eksekusi pada perangkat."
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`Task Ansible ditandai FAILED oleh automation engine.`"
+
                 elif "error:" in combined_log:
                     error_title = "Terjadi error internal pada perangkat saat eksekusi."
-
+                    detail_block = f"\n\n**Detail Log Perangkat:**\n`VRP/RouterOS internal runtime error.`"
 
                 if error_title:
                     status_flag = "error"
