@@ -115,6 +115,7 @@ SHARED_VENDOR_RULES = """
 - VENDOR STRICTNESS: You MUST check the 'Vendor' column in the DB Context. Use [HUAWEI] rules strictly for Huawei/CE/VRP devices, and [MIKROTIK] rules strictly for MikroTik/RouterOS devices. NEVER mix syntax!
 - PING LIMIT: ALWAYS limit ping tests to max 3 packets.
 - STRICT OUTPUT: Output CLI commands directly. NO conversational filler. The ONLY allowed conversational text is EXACTLY "Execute this now?" at the very end of your preview.
+- STRICT L2/L3 ISOLATION (CRITICAL): When a user asks to add VLANs and IPs, DO NOT generate physical port configurations (like `g0/0/5`, `trunk`, `access`, or bridge ports). Create ONLY the logical VLANs and assign IPs to their respective logical interfaces (Vlanif / VLAN).
 
 [HUAWEI BASE]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
@@ -125,7 +126,7 @@ SHARED_VENDOR_RULES = """
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
 - OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
-- SCOPE: ONLY Global VLANs & Vlanif. NO physical ports UNLESS req.
+- SCOPE (CRITICAL): ONLY Global VLANs & Vlanif. NEVER configure physical ports (`interface g0/0/...`) or switchport modes (`port link-type...`) unless explicitly forced by the user.
 
 [MIKROTIK BASE]
 - Absolute paths (`/ip address add...`).
