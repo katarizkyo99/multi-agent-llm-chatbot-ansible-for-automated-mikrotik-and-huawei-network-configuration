@@ -542,7 +542,6 @@ class ChatView(APIView):
           # Menghapus Perangkat  
           elif "[DELETE_DEVICE_FROM_DB]" in clean_reply:
                 print("Menghapus perangkat dari DB...")
-                import re
                 try:
                     parts = proses_1_reply.split("[DELETE_DEVICE_FROM_DB]")
                     bot_text = parts[0].strip()
