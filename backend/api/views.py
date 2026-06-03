@@ -210,7 +210,7 @@ RULES:
 
 ACTIONS:
 1. Mermaid `graph TD`: 1-line format `A["Name<br>IP"] -->|Port| B["Name<br>IP"]`. Edge label=1 word max. NO IPs/spaces/<br> on edges.
-2. DB Add: `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","user":"","pass":"","vendor":""}`
+2. DB Add: `[ADD_DEVICE_TO_DB] {"name":"","host":"","port":"","username":"","password":"","vendor":""}`
 3. DB Del: `[DELETE_DEVICE_FROM_DB] {"name":""}`
 4. Read: `[READ_DEVICE] target_name, cli_command`.
 
