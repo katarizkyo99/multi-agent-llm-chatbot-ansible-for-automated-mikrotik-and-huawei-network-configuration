@@ -119,9 +119,9 @@ SHARED_VENDOR_RULES = """
 [HUAWEI BASE]
 - NO 'system-view','return','!'. USE 'quit' to exit views.
 - PING COMMAND: For ping tests, ALWAYS use exactly `ping -c 5 <ip>`. NEVER use slash `/` or `count=3`.
-- UP PORT: 'undo shutdown'. NO 'portswitch'.
-- PORT ACCESS ASSIGNMENT: DO NOT create the global VLAN at the beginning if just assigning. Directly entry the interface view using `interface <name>`.
+- UP PORT: 'undo shutdown'
 - TRUNK CONFIG: EXACT SEQ: 1) `interface <name>` 2) `port link-type trunk` 3) `port trunk allow-pass vlan <id>` 4) `quit`. NEVER use `display`.
+- ACCESS CONFIG: EXACT SEQ: 1) `interface <name>` 2) `port link-type access` 3) `port default vlan <id>` 4) `quit`.
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
 - OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
@@ -222,7 +222,8 @@ ACTIONS:
 
 WORKFLOW:
 - P1(Analyze): ONLY FOR NEW TOPOLOGY OR IMAGE. Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
-- P2(Preview): IF USER ASKS TO CONFIGURE, ADD, OR CREATE (e.g., "Tambahkan IP"), YOU MUST SKIP P1 ENTIRELY AND DO NOT OUTPUT MERMAID. You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using ```text \n commands \n ```). INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
+- P2(Preview): IF USER ASKS TO CONFIGURE, ADD, OR CREATE (e.g., "Tambahkan IP"), YOU MUST SKIP P1 ENTIRELY AND DO NOT OUTPUT MERMAID. You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using 
+http://googleusercontent.com/immersive_entry_chip/0
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
 - P4(Read): If user asks to check/read a device, output ONLY the `[READ_DEVICE] target, command` tag. NEVER append "Execute this now?" or any other text!
 
