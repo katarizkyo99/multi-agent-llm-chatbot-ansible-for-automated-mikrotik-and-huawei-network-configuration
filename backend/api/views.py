@@ -138,6 +138,14 @@ SHARED_VENDOR_RULES = """
 # ==============================================================================
 # DYNAMIC TEMPLATES
 # ==============================================================================
+VLAN_IP_TEMPLATE = """
+[VLAN & IP ASSIGNMENT (CRITICAL STRICT RULES)]
+- L3 OVERRIDE: This is purely a logical L3 request. YOU MUST COMPLETELY IGNORE physical interfaces (g0/0/..., ether...) from the topology memory.
+- PHYSICAL PORT BAN: NEVER generate `interface g0/0/...`, `port link-type...`, or `port default vlan...` commands. DO NOT MIX tagging with this assignment!
+- HUAWEI EXACT SEQ: 1) `vlan batch <id1> <id2>...` 2) `interface Vlanif<id>` 3) `ip address <ip> <mask>` 4) `quit`.
+- MIKROTIK EXACT SEQ: 1) `/interface vlan add name=vlan<id> interface=<parent> vlan-id=<id>` 2) `/ip address add address=<ip/mask> interface=vlan<id>`.
+"""
+
 HUAWEI_OSPF_TEMPLATE = """
 [HUAWEI OSPF (CRITICAL STRICT RULES)]
 - NO TERMINAL PROMPTS: NEVER output brackets indicating terminal views like `[ospf 1]` or `<Huawei>`. Output ONLY the raw commands.
@@ -188,13 +196,6 @@ MIKROTIK_NAT_TEMPLATE = """
 [MIKROTIK NAT]
 - ONLY execute if requested. CMD: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
 """
-
-VLAN_IP_TEMPLATE = """
-[VLAN & IP ASSIGNMENT (CRITICAL STRICT RULES)]
-- PHYSICAL PORT BAN: DO NOT output any physical interface configurations (e.g., `interface g0/0/5`, `port link-type`, `port default vlan`).
-- HUAWEI EXACT SEQ: 1) ALWAYS create global VLANs first using `vlan batch <id1> <id2>...` 2) `interface Vlanif<id>` 3) `ip address <ip> <mask>` 4) `quit`.
-- MIKROTIK EXACT SEQ: 1) `/interface vlan add name=vlan<id> interface=<parent> vlan-id=<id>` 2) `/ip address add address=<ip/mask> interface=vlan<id>`.
-"""
 # =======================================================================================================================
 
 PROSES_1_PROMPT = """
@@ -222,8 +223,7 @@ ACTIONS:
 
 WORKFLOW:
 - P1(Analyze): ONLY FOR NEW TOPOLOGY OR IMAGE. Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
-- P2(Preview): IF USER ASKS TO CONFIGURE, ADD, OR CREATE (e.g., "Tambahkan IP"), YOU MUST SKIP P1 ENTIRELY AND DO NOT OUTPUT MERMAID. You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using 
-http://googleusercontent.com/immersive_entry_chip/0
+- P2(Preview): IF USER ASKS TO CONFIGURE, ADD, OR CREATE (e.g., "Tambahkan IP"), YOU MUST SKIP P1 ENTIRELY AND DO NOT OUTPUT MERMAID. You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using ```text \n commands \n ```). DRAFT REVISION RULE: If generating a new draft or combining/revising a previous draft, output the FULL CLEAN configuration block. DO NOT append 'undo' commands to fix an unexecuted draft mistake; just write the correct commands from scratch. NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
 - P4(Read): If user asks to check/read a device, output ONLY the `[READ_DEVICE] target, command` tag. NEVER append "Execute this now?" or any other text!
 
