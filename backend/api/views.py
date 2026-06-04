@@ -41,14 +41,17 @@ def call_groq_llm(api_key, model, messages, temperature=0.3):
 def get_dynamic_templates(user_prompt):
     prompt_lower = user_prompt.lower()
     templates = []
+
+    if "vlan" in prompt_lower or "ip" in prompt_lower:
+        templates.append(VLAN_IP_TEMPLATE)
+        
+    if "ospf" in prompt_lower or "routing" in prompt_lower:
+        templates.append(HUAWEI_OSPF_TEMPLATE)
+        templates.append(MIKROTIK_OSPF_TEMPLATE)
     
     if "ospf" in prompt_lower or "routing" in prompt_lower:
         templates.append(HUAWEI_OSPF_TEMPLATE)
         templates.append(MIKROTIK_OSPF_TEMPLATE)
-        
-    if "dhcp" in prompt_lower:
-        templates.append(HUAWEI_DHCP_TEMPLATE)
-        templates.append(MIKROTIK_DHCP_TEMPLATE)
         
     if "nat" in prompt_lower or "masquerade" in prompt_lower or "internet" in prompt_lower:
         templates.append(MIKROTIK_NAT_TEMPLATE)
@@ -122,7 +125,7 @@ SHARED_VENDOR_RULES = """
 - DEL: Use 'quit' to exit int BEFORE global undo (`undo vlan <id>`).
 - OSPF L3 PORT: USE 'port link-type access', 'port default vlan <id>'.
 - TRUNK UNDO: `undo port trunk allow-pass vlan` BEFORE `undo port link-type`.
-- SCOPE (CRITICAL): ONLY Global VLANs & Vlanif. NEVER configure physical ports (`interface g0/0/...`) or switchport modes (`port link-type...`) unless explicitly forced by the user.
+- SCOPE (CRITICAL): ONLY Global VLANs (`vlan batch`) & Vlanif.
 
 [MIKROTIK BASE]
 - Absolute paths (`/ip address add...`).
@@ -184,6 +187,13 @@ MIKROTIK_DHCP_TEMPLATE = """
 MIKROTIK_NAT_TEMPLATE = """
 [MIKROTIK NAT]
 - ONLY execute if requested. CMD: `/ip firewall nat add chain=srcnat out-interface=<ext> action=masquerade`.
+"""
+
+VLAN_IP_TEMPLATE = """
+[VLAN & IP ASSIGNMENT (CRITICAL STRICT RULES)]
+- PHYSICAL PORT BAN: DO NOT output any physical interface configurations (e.g., `interface g0/0/5`, `port link-type`, `port default vlan`).
+- HUAWEI EXACT SEQ: 1) ALWAYS create global VLANs first using `vlan batch <id1> <id2>...` 2) `interface Vlanif<id>` 3) `ip address <ip> <mask>` 4) `quit`.
+- MIKROTIK EXACT SEQ: 1) `/interface vlan add name=vlan<id> interface=<parent> vlan-id=<id>` 2) `/ip address add address=<ip/mask> interface=vlan<id>`.
 """
 # =======================================================================================================================
 
