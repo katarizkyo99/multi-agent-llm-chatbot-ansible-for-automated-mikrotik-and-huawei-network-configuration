@@ -58,10 +58,6 @@ def get_dynamic_templates(user_prompt):
     return ""
 # ==============================================================================
 # FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
-# ==============================================================================
-# ==============================================================================
-# FUNGSI UNTUK MEMBERSIHKAN SINTAKS MERMAID YANG DIHASILKAN LLM
-# ==============================================================================
 def sanitize_mermaid(text):    
     mermaid_match = re.search(r'```mermaid\n(.*?)```', text, re.DOTALL)
     
@@ -215,9 +211,8 @@ ACTIONS:
 4. Read: `[READ_DEVICE] target_name, cli_command`.
 
 WORKFLOW:
-- P1(Analyze): Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
-- P2(Preview): You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using ```text \n commands \n 
-```). INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
+- P1(Analyze): ONLY FOR NEW TOPOLOGY OR IMAGE. Extract data -> Mermaid. NO CONFIG. If OSPF lacks PID/Name, ask: "Untuk [Device], apa nama instance/PID-nya?". End EXACTLY: "Topologi dipetakan. Buatkan draf Identitas, VLAN global, & IP? Atau ada request spesifik?"
+- P2(Preview): IF USER ASKS TO CONFIGURE, ADD, OR CREATE (e.g., "Tambahkan IP"), YOU MUST SKIP P1 ENTIRELY AND DO NOT OUTPUT MERMAID. You MUST start each device config with EXACTLY `### <device_name> (<vendor>)`. You MUST wrap the actual CLI commands strictly inside a Markdown text block (using ```text \n commands \n ```). INCREMENTAL configs only (don't repeat). NEVER use 'Target:' or 'Konfigurasi:'. End EXACTLY: "Execute this now?". CRITICAL: NEVER output [GENERATE_CONFIG] here!
 - P3(Execute): Output `[GENERATE_CONFIG]` ONLY if user confirms SHORTLY ('ya','gas').
 - P4(Read): If user asks to check/read a device, output ONLY the `[READ_DEVICE] target, command` tag. NEVER append "Execute this now?" or any other text!
 
