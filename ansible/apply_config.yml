@@ -30,7 +30,6 @@
 
     - name: Apply config to Huawei
       community.network.ce_command:
-        # Kirim semua baris perintah sekaligus dalam bentuk list (tanpa loop!)
         commands: "{{ ['system-view'] + config_cli.split('\n') + ['return'] }}"
       when: ansible_network_os == 'community.network.ce' and config_cli | trim != ''
       register: huawei_result
