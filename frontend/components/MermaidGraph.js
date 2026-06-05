@@ -3,17 +3,12 @@ import React, { useEffect, useRef, useState } from "react";
 const MermaidGraph = ({ chart }) => {
     const graphRef = useRef(null);
     const [hasError, setHasError] = useState(false); 
-
     useEffect(() => {
         const renderGraph = async () => {
             try {
-                // Di sini aman karena filenya sudah diisolasi dari proses SSR Next.js
-                const mermaid = (await import("mermaid")).default;
-                
-                mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-                
-                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-                
+                const mermaid = (await import("mermaid")).default;                
+                mermaid.initialize({ startOnLoad: false, theme: 'neutral' });                
+                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;               
                 const { svg } = await mermaid.render(id, chart);
                 if (graphRef.current) {
                     graphRef.current.innerHTML = svg;
@@ -23,7 +18,6 @@ const MermaidGraph = ({ chart }) => {
                 setHasError(true); 
             }
         };
-
         if (chart) {
             setHasError(false); 
             renderGraph();
