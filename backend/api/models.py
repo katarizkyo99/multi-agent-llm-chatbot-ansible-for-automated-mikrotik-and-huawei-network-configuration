@@ -12,7 +12,6 @@ class Chat(models.Model):
 
     def __str__(self):
         return self.title
-
 class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
@@ -26,7 +25,6 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:30] if self.content else '[image]'}"
-
 class RiwayatKonfigurasi(models.Model):
     config = models.TextField()
     status = models.TextField()
@@ -39,8 +37,6 @@ class RiwayatKonfigurasi(models.Model):
 
     def __str__(self):
         return f"{self.status} - {self.created_at}"
-
-
 class NetworkDevice(models.Model):
     name = models.CharField(max_length=100, unique=True)
     host = models.GenericIPAddressField()
@@ -51,7 +47,6 @@ class NetworkDevice(models.Model):
 
     def __str__(self):
         return self.name
-
 class DeviceAlias(models.Model):
     alias_name = models.CharField(max_length=100, unique=True) 
     
