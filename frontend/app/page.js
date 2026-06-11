@@ -17,6 +17,7 @@ export default function Home() {
     const [editingIndex, setEditingIndex] = useState(null);
     const [newName, setNewName] = useState("");
     const [chats, setChats] = useState([]);
+    const [selectedImage, setSelectedImage] = useState(null);
     const [activeChatId, setActiveChatId] = useState(null);
     const [input, setInput] = useState("");
     const [isThinking, setIsThinking] = useState(false);
@@ -27,7 +28,6 @@ export default function Home() {
     
     const [configHistory, setConfigHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
     const [networkUsers, setNetworkUsers] = useState([]);
