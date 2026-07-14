@@ -1,0 +1,15 @@
+c,,,,,,,,,,,,,,,
+Performance Testing Results of LLM Response Time in Chatbot System,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+No,Complexity Level,Instruction Scenario,Average Input Tokens,Average Output Tokens,Trial (seconds),,,,,,,,,,
+,,,,,1,2,3,4,5,6,7,8,9,10,Average
+1,Very Low,Greeting message,1614,94,"0,79","0,74","0,80","0,65","0,60","0,60","0,59","0,67","0,60","0,73","0,67"
+2,Low,Listing registered devices in the database,1727,122,"0,80","1,37","1,51","0,96","0,92","1,12","0,69","0,69","0,73","1,00","0,98"
+3,Low,Drafting IP address listing for Routera (Mikrotik),1642,20,"0,73","0,68","2,01","1,96","1,44","0,88","1,18","1,56","1,12","1,08","1,26"
+4,Low,Drafting IP/interface listing for Routerb (Huawei),1590,23,"0,69","1,41","0,81","1,22","0,84","1,12","1,04","0,63","1,15","1,68","1,06"
+5,Medium,Drafting IP address addition on Routera (Mikrotik),1595,35,"0,93","1,71","1,50","1,70","0,61","0,97","0,87","1,53","1,78","1,48","1,31"
+6,Medium,Drafting VLAN creation on Routerc (Huawei),1623,34,"1,89","0,73","0,71","2,11","1,91","1,18","1,72","2,01","2,64","2,61","1,75"
+7,High,Drafting static routing on Routera (Mikrotik),2172,41,"1,82","1,18","0,94","1,00","0,78","0,64","0,97","1,15","0,84","0,76","1,01"
+8,High,Drafting dynamic OSPF routing for three devices,3406,292,"6,38","1,18","1,10","1,10","1,15","1,21","1,15","1,33","0,99","1,05","1,66"
+9,Very High,Image-based topology analysis (2 nodes),344,144,"0,61","0,71","0,67","0,60","0,62","0,62","0,61","0,65","0,62","0,65","0,64"
+10,Very High,Image-based topology analysis (3 nodes),344,397,"1,27","1,19","1,24","1,30","1,27","1,30","1,16","2,33","1,19","1,22","1,35"
