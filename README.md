@@ -454,7 +454,7 @@ frontend/package.json
 ## Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/katarizkyo99/ProyekAkhir.git
 cd ProyekAkhir
 ```
 
