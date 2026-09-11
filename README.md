@@ -1,5 +1,7 @@
 # Multi-Agent LLM Chatbot for Automated MikroTik and Huawei Network Configuration
 
+![Project Preview](/Result/Tampilan Chatbobbt.jpg)
+
 A multimodal, **multi-agent Large Language Model (LLM)-based chatbot** for automated network device configuration using **Ansible**.
 
 This project integrates a conversational AI interface with a multi-agent LLM architecture and network automation engine to simplify the configuration of **MikroTik routers** and **Huawei switches**.
