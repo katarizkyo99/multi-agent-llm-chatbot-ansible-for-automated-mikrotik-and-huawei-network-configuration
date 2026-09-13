@@ -645,12 +645,5 @@ This separation is important for maintaining the scalability and reliability of 
 
 **Rizky Octa Vianto**
 
-Final Project — Internet Engineering / Network Automation
-
 ---
 
-# Project Objective
-
-This project aims to integrate **Large Language Models, multimodal interaction, and network automation** into a unified system for simplifying network device configuration.
-
-By combining a **multi-agent LLM architecture** with **Ansible-based automation**, the system provides a conversational interface for network configuration while retaining an automated and structured execution layer for MikroTik routers and Huawei switches.
